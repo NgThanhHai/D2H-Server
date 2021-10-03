@@ -1,0 +1,34 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "main": "src/bin/www",
+  "scripts": {
+    "start": "node ./src/bin/www",
+    "push": "git add . && git commit -m 'fix' && git push heroku master && heroku open",
+    "dev": "nodemon src/bin/www"
+  },
+  "engines": {
+    "npm": "7.24.1",
+    "node": "v14.17.3"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "~1.4.4",
+    "debug": "~2.6.9",
+    "express": "~4.16.1",
+    "http-errors": "~1.6.3",
+    "jade": "~1.11.0",
+    "jsonwebtoken": "^8.5.1",
+    "morgan": "~1.9.1",
+    "nodejs": "^0.0.0",
+    "sequelize": "^6.6.5"
+  },
+  "devDependencies": {
+    "bcrypt": "^5.0.1",
+    "dotenv": "^10.0.0",
+    "express-validator": "^6.12.1",
+    "mysql": "^2.18.1",
+    "mysql2": "^2.3.0",
+    "nodemon": "^2.0.12"
+  }
+}
