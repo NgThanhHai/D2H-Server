@@ -3,15 +3,16 @@ const express = require('express');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
-
+const db = require('./src/app/models/index')
 const indexRouter = require('./src/routes/index');
 var apiResponse = require('./src/app/helpers/apiResponse');
-var app = express();
-
-
-// view engine setup
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'jade');
+const dotenv = require('dotenv').config();
+if (dotenv.error) {
+    throw dotenv.error;
+}
+//init createServer
+const app = express();
+const port = process.env.PORT || 3000
 
 app.use(logger('dev'));
 app.use(express.json());
@@ -19,24 +20,25 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'app/public')));
 
+
+app.listen(port, () => console.log(`Server listen on port ${port}!`));
+
+
 app.use('/api', indexRouter);
 
 app.use("*", function(req, res) {
   return apiResponse.notFoundResponse(res, "Page not found");
 })
 app.use(express.static("public"))
+
 // error handler
 app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
-
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
+  if(err.name == "UnauthorizedError"){
+    return apiResponse.unauthorizedResponse(res, err.message)
+}
 });
 
-const db = require('./src/app/models/index')
+
 db.sequelize.sync();
 
 module.exports = app;

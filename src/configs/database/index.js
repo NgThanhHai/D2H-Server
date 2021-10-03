@@ -1,5 +1,5 @@
 const mysql = require('mysql')
-
+require('dotenv').config();
 initialize();
 
 async function initialize() {
@@ -10,4 +10,4 @@ async function initialize() {
     });
 
   await con.query(`CREATE DATABASE IF NOT EXISTS \`${process.env.DB}\`;`);
-}
+} 
