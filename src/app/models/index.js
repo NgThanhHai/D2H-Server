@@ -3,6 +3,7 @@ require('dotenv').config();
 const sequelize = new Sequelize(process.env.DB, process.env.USER, process.env.PASSWORD, {
   host: process.env.DATABASE_HOST,
   dialect: "mysql",
+  dialectModule: require('mysql2'),
   operatorsAliases: false,
   pool: {
     max: 5,
