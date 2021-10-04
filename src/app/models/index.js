@@ -4,7 +4,6 @@ const sequelize = new Sequelize(process.env.DB, process.env.USER, process.env.PA
   host: process.env.DATABASE_HOST,
   dialect: "mysql",
   dialectModule: require('mysql2'),
-  operatorsAliases: false,
   pool: {
     max: 5,
     min: 0,

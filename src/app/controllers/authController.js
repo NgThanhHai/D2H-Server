@@ -58,52 +58,52 @@ exports.signUp = function(req, res) {
     })
 }
 
-exports.login = [
-	body("username").isLength({min: 1}).trim().withMessage("Username must be specified"),
-	body("password").isLength({min: 1}).trim().withMessage("Password must be specified"),
-	sanitizeBody("username").escape(),
-	sanitizeBody("password").escape(),
-	(req, res) => {
+// exports.login = [
+// 	body("username").isLength({min: 1}).trim().withMessage("Username must be specified"),
+// 	body("password").isLength({min: 1}).trim().withMessage("Password must be specified"),
+// 	sanitizeBody("username").escape(),
+// 	sanitizeBody("password").escape(),
+// 	(req, res) => {
 
-		try{
-			const errors = validationResult(req);
-			if(!errors.isEmpty){
-				return apiResponse.validationErrorWithData(res, "validation Error", errors.array());
-			}
-			else{
-				UserModel.findOne({
-                    where : {
-						username: req.body.username
-					}
-                    })
-					.then(user =>{
-					if(user){
-						bcrypt.compare(req.body.password, user.password, (err, same) => {
-							if(same){
-								if(!user.isBlocked){
-									let userData = {
-										_id : user._id
-									}
-									const jwtPayload = userData;
-									const jwtData = {expiresIn: access_token_life};
-									const secret = access_token_secret;
-									userData.token = jwt.sign(jwtPayload, secret, jwtData);
-									return apiResponse.successResponseWithData(res, "Success", userData);
-								}
-								else{
-									return apiResponse.unauthorizedResponse(res, "Account is blocked. Please contact admin");
-								}
-							}else{
-								return apiResponse.unauthorizedResponse(res, "User or password wrong")
-							}	
-						})
-					}
-					else{
-						return apiResponse.unauthorizedResponse(res, "User or password wrong")
-					}
-				})
-			}
-		}catch(err){
-			return apiResponse.ErrorResponse(res, err);
-		}
-	}]
+// 		try{
+// 			const errors = validationResult(req);
+// 			if(!errors.isEmpty){
+// 				return apiResponse.validationErrorWithData(res, "validation Error", errors.array());
+// 			}
+// 			else{
+// 				UserModel.findOne({
+//                     where : {
+// 						username: req.body.username
+// 					}
+//                     })
+// 					.then(user =>{
+// 					if(user){
+// 						bcrypt.compare(req.body.password, user.password, (err, same) => {
+// 							if(same){
+// 								if(!user.isBlocked){
+// 									let userData = {
+// 										_id : user._id
+// 									}
+// 									const jwtPayload = userData;
+// 									const jwtData = {expiresIn: access_token_life};
+// 									const secret = access_token_secret;
+// 									userData.token = jwt.sign(jwtPayload, secret, jwtData);
+// 									return apiResponse.successResponseWithData(res, "Success", userData);
+// 								}
+// 								else{
+// 									return apiResponse.unauthorizedResponse(res, "Account is blocked. Please contact admin");
+// 								}
+// 							}else{
+// 								return apiResponse.unauthorizedResponse(res, "User or password wrong")
+// 							}	
+// 						})
+// 					}
+// 					else{
+// 						return apiResponse.unauthorizedResponse(res, "User or password wrong")
+// 					}
+// 				})
+// 			}
+// 		}catch(err){
+// 			return apiResponse.ErrorResponse(res, err);
+// 		}
+// 	}]
