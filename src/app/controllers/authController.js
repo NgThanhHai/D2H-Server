@@ -6,6 +6,7 @@ var bcrypt = require('bcrypt')
 var apiResponse = require('./../helpers/apiResponse')
 var {access_token_secret, access_token_life, refresh_token_secret, refresh_token_life} = require('./../../configs/auth/index');
 
+
 exports.register = (req, res) => {
     var data = {
         status: 1,
@@ -35,7 +36,9 @@ exports.signUp = function(req, res) {
             var newUser = {
                 username: username,
                 password: hash,
-                email: `${username}@d2h.com`,
+                mail: `${username}@d2h.com`,
+				phone_number: `12312312312`,
+				role: `user`
             }
 
             UserModel.create(newUser)
