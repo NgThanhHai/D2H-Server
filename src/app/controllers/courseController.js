@@ -145,14 +145,11 @@ exports.createCourse = [auth, function (req, res) {
                     course_code: req.body.course_code
                 }
 
-
                 CourseModel.create(Course).then(result =>
                     CourseUserModel.create({
                         course_id: result.course_id,
                         user_id: req.params.userId,
                     }));
-
-
 
 
                 return apiResponse.successResponse(res, "Create course successfully");
