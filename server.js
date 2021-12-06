@@ -39,7 +39,7 @@ app.use(function(err, req, res, next) {
 });
 
 
-db.sequelize.sync({ force: true }).then(result => {
+db.sequelize.sync({ force: false }).then(result => {
   console.log(result);
 }).catch(err => {
   console.log(err);
