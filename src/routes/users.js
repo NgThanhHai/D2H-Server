@@ -7,6 +7,6 @@ router.get('/', function(req, res, next) {
   res.send('respond with a Root Dir2');
 });
 
-router.get('/users/me', UserController.getMyInfo)
+router.get('/me', UserController.getMyInfo)
 
 module.exports = router;

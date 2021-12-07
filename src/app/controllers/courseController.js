@@ -8,6 +8,9 @@ const course = require('../models/course');
 
 
 exports.getAllCourses = [auth, function (req, res) {
+
+    var user_id = req.user.user_id
+
     try {
         CourseModel.findAll(
             {
@@ -15,7 +18,7 @@ exports.getAllCourses = [auth, function (req, res) {
                     model: UserModel, as: "user",
                     required: true,
                     where: {
-                        user_id: req.params.userId
+                        user_id: user_id 
                     }
                 }]
             }
@@ -37,6 +40,8 @@ exports.getAllCourses = [auth, function (req, res) {
 
 exports.getCourseByCode = [auth, function (req, res) {
 
+    var user_id = req.user.user_id
+
     try {
 
         CourseModel.findOne(
@@ -45,7 +50,7 @@ exports.getCourseByCode = [auth, function (req, res) {
                     model: UserModel, as: "user",
                     required: true,
                     where: {
-                        user_id: req.params.userId
+                        user_id: user_id
                     }
                 }],
                 where: {
@@ -69,6 +74,8 @@ exports.getCourseByCode = [auth, function (req, res) {
 }]
 
 exports.getCourseByName = [auth, function (req, res) {
+    
+    var user_id = req.user.user_id
     try {
         CourseModel.findOne(
             {
@@ -76,7 +83,7 @@ exports.getCourseByName = [auth, function (req, res) {
                     model: UserModel, as: "user",
                     required: true,
                     where: {
-                        user_id: req.params.userId
+                        user_id: user_id
                     }
                 }],
                 where: {
@@ -101,6 +108,8 @@ exports.getCourseByName = [auth, function (req, res) {
 
 exports.getCourse = [auth, function (req, res) {
 
+    var user_id = req.user.user_id
+
     try {
         CourseModel.findOne(
             {
@@ -108,7 +117,7 @@ exports.getCourse = [auth, function (req, res) {
                     model: UserModel, as: "user",
                     required: true,
                     where: {
-                        user_id: req.params.userId
+                        user_id: user_id
                     }
                 }],
                 where: {
@@ -132,6 +141,9 @@ exports.getCourse = [auth, function (req, res) {
 }]
 
 exports.createCourse = [auth, function (req, res) {
+    
+    var user_id = req.user.user_id
+
     if (!req.body) {
         return apiResponse.badRequestResponse(res, "Lack of required data")
     }
@@ -148,7 +160,7 @@ exports.createCourse = [auth, function (req, res) {
                 CourseModel.create(Course).then(result =>
                     CourseUserModel.create({
                         course_id: result.course_id,
-                        user_id: req.params.userId,
+                        user_id: user_id,
                     }));
 
 
@@ -164,13 +176,13 @@ exports.createCourse = [auth, function (req, res) {
 }]
 
 exports.deleteCourses = [auth, function (req, res) {
-
+    var user_id = req.user.user_id
     try {
         CourseUserModel.findOne(
             {
                 where: {
                     course_id: req.params.courseId,
-                    user_id : req.params.userId
+                    user_id : user_id
                 }
             })
             .then(course => {
@@ -194,12 +206,13 @@ exports.deleteCourses = [auth, function (req, res) {
 
 
 exports.updateCourse = [auth, function (req, res) {
+    var user_id = req.user.user_id
     try {
         CourseUserModel.findOne(
             {
                 where: {
                     course_id: req.params.courseId,
-                    user_id : req.params.userId
+                    user_id : user_id
                 }
             })
             .then(course => {
