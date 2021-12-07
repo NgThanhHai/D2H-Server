@@ -82,7 +82,7 @@ exports.login = [
 							if(same){
 								if(!user.isBlocked){
 									let userData = {
-										_id : user._id
+										user_id : user.user_id
 									}
 									const jwtPayload = userData;
 									const jwtData = {expiresIn: access_token_life};
