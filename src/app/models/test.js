@@ -13,7 +13,7 @@ module.exports = (sequelize, Sequelize) => {
             values: ['new', 'graded', 'closed']
         },
         graded_date: {
-            type: Sequelize.DATE(6)
+            type: Sequelize.DATE
         }
     }, {timestamps: true}, {underscored: true})
 
