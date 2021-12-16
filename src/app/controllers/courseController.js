@@ -127,7 +127,7 @@ exports.getCourse = [auth, function (req, res) {
             .then(course => {
                 if (course) {
 
-                    courses.forEach(course => {
+                    course.forEach(course => {
                         delete course.dataValues.user
                     });
                     return apiResponse.successResponseWithData(res, "Success", course)
