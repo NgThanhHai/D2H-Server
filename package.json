@@ -8,7 +8,7 @@
   },
   "engines": {
     "npm": "7.24.1",
-    "node": "v14.17.3"
+    "node": "v16.13.1"
   },
   "dependencies": {
     "bcrypt": "^5.0.1",
@@ -16,7 +16,9 @@
     "body-parse": "^0.1.0",
     "body-parser": "^1.19.0",
     "buffer": "^6.0.3",
+    "cloudinary": "^1.27.1",
     "cookie-parser": "~1.4.4",
+    "cors": "^2.8.5",
     "debug": "~2.6.9",
     "dotenv": "^10.0.0",
     "express": "~4.16.1",
@@ -27,10 +29,13 @@
     "jsonwebtoken": "^8.5.1",
     "jwt-decode": "^3.1.2",
     "morgan": "~1.9.1",
+    "multer": "^1.4.4",
+    "multer-storage-cloudinary": "^4.0.0",
     "mysql": "^2.18.1",
-    "mysql2": "^2.3.0",
+    "mysql2": "^2.3.3",
     "nodejs": "^0.0.0",
-    "sequelize": "^6.6.5"
+    "npm": "^8.3.0",
+    "sequelize": "^6.12.0"
   },
   "devDependencies": {
     "nodemon": "^2.0.12"

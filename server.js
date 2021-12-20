@@ -8,12 +8,14 @@ const indexRouter = require('./src/routes/index');
 var apiResponse = require('./src/app/helpers/apiResponse');
 const { body } = require('express-validator/check');
 const dotenv = require('dotenv').config();
+const cors = require('cors');
+
 if (dotenv.error) {
     throw dotenv.error;
 }
 //init createServer
 const app = express();
-const port = process.env.PORT || 3000
+const port = process.env.PORT || 8000
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -21,7 +23,10 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(bodyParser.json())
 app.use(express.static(path.join(__dirname, 'app/public')));
-
+app.use(cors({
+  credentials: true,
+  origin: ['http://localhost:3000']
+}));
 
 app.listen(port, () => console.log(`Server listen on port ${port}!`));
 
