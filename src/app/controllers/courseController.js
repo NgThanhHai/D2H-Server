@@ -57,13 +57,11 @@ exports.getCourseByCode = [auth, function (req, res) {
                     course_code: req.params.courseCode
                 }
             })
-            .then(course => {
-                if (course) {
+            .then(courses => {
+                if (courses) {
 
-                    course.forEach(course => {
-                        delete course.dataValues.user
-                    });
-                    return apiResponse.successResponseWithData(res, "Success", course)
+                    delete courses.dataValues.user
+                    return apiResponse.successResponseWithData(res, "Success", courses)
                 } else {
                     return apiResponse.successResponse(res, "Course not existed")
                 }
@@ -90,13 +88,11 @@ exports.getCourseByName = [auth, function (req, res) {
                     course_name: req.params.courseName
                 }
             })
-            .then(course => {
-                if (course) {
+            .then(courses => {
+                if (courses) {
 
-                    course.forEach(course => {
-                        delete course.dataValues.user
-                    });
-                    return apiResponse.successResponseWithData(res, "Success", course)
+                    delete courses.dataValues.user
+                    return apiResponse.successResponseWithData(res, "Success", courses)
                 } else {
                     return apiResponse.successResponse(res, "Course not existed")
                 }
@@ -124,13 +120,11 @@ exports.getCourse = [auth, function (req, res) {
                     course_id: req.params.courseId
                 }
             })
-            .then(course => {
-                if (course) {
+            .then(courses => {
+                if (courses) {
 
-                    course.forEach(course => {
-                        delete course.dataValues.user
-                    });
-                    return apiResponse.successResponseWithData(res, "Success", course)
+                    delete courses.dataValues.user
+                    return apiResponse.successResponseWithData(res, "Success", courses)
                 } else {
                     return apiResponse.successResponse(res, "Course not existed")
                 }
