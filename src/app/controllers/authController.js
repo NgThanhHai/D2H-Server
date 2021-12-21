@@ -18,6 +18,8 @@ exports.register = (req, res) => {
 exports.signUp = function(req, res) {
     var username = req.body.username
     var password = req.body.password
+	var email = req.body.email
+	var phone = req.body.phone
 
     UserModel.findOne({
          where : {
@@ -36,8 +38,8 @@ exports.signUp = function(req, res) {
             var newUser = {
                 username: username,
                 password: hash,
-                mail: `${username}@d2h.com`,
-				phone_number: `12312312312`,
+                mail: email,
+				phone_number: phone,
 				role: `user`
             }
 
