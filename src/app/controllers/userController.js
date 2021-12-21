@@ -5,6 +5,7 @@ const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 var apiResponse = require('./../helpers/apiResponse');
 const auth = require('./../../middlewares/jwt');
+const cloneDeep = require('../../utils/cloneDeep')
 
 var { access_token_secret, access_token_life, refresh_token_secret, refresh_token_life } = require('./../../configs/auth/index');
 
@@ -26,7 +27,17 @@ exports.getMyInfo = [auth, function (req, res) {
 
         }).then(user => {
             if (user) {
-                return apiResponse.successResponseWithData(res, "Success", user)
+                const newUser = cloneDeep(user.dataValues)
+                console.log(newUser)
+
+                delete newUser.password
+                newUser.email = newUser.mail
+                delete newUser.mail
+                newUser.phone = newUser.phone_number
+                delete newUser.phone_number
+                newUser.createdAt = user.dataValues.createdAt
+                newUser.updatedAt = user.dataValues.updatedAt
+                return apiResponse.successResponseWithData(res, "Success", newUser)
             } else {
                 return apiResponse.ErrorResponse(res, "Id not found")
             }

@@ -5,6 +5,11 @@ module.exports = (sequelize, Sequelize) => {
             primaryKey: true,
             autoIncrement: true
         },
+        test_answer_type: {
+            type: Sequelize.ENUM,
+            values: ['image', 'object' , 'csv'],
+            allowNull: false,
+        },
         is_multiple_choice: {
             type: Sequelize.BOOLEAN,
             allowNull: false,

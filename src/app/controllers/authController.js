@@ -46,12 +46,16 @@ exports.signUp = function(req, res) {
             UserModel.create(newUser)
                 .then(data => {
                     let userData = {
-						_id : data._id
+						user_id : data.user_id
+						
 					}
+					console.log(data.user_id)
 					const jwtPayload = userData;
 					const jwtData = {expiresIn: access_token_life};
 					const secret = access_token_secret;
 					userData.token = jwt.sign(jwtPayload, secret, jwtData);
+					userData.expire_time = ((new Date()).getTime() + access_token_life*60*60*1000).toLocaleString();
+					userData.user_id = data.user_id;
 					apiResponse.successResponseWithData(res, "Success", userData);
                 })
                 .catch(err => {
