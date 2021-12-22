@@ -38,8 +38,9 @@ app.use(express.static(path.join(__dirname, 'app/public')));
 
 
 app.use(cors(corsOptions));
-app.listen(port, () => console.log(`Server listen on port ${port}!`));
 app.use('/api', indexRouter);
+app.listen(port, () => console.log(`Server listen on port ${port}!`));
+
 
 app.use("*", function(req, res) {
   return apiResponse.notFoundResponse(res, "Page not found");
