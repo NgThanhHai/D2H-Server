@@ -30,9 +30,9 @@ app.use(cookieParser());
 app.use(bodyParser.json())
 app.use(express.static(path.join(__dirname, 'app/public')));
 
+
+app.use(cors());
 app.listen(port, () => console.log(`Server listen on port ${port}!`));
-
-
 app.use('/api', indexRouter);
 
 app.use("*", function(req, res) {
