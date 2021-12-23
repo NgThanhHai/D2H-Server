@@ -39,21 +39,10 @@ app.use(express.static(path.join(__dirname, 'app/public')));
 
 app.use(cors());
 
-app.use('/', function(req, res) {
-  var url = 'https://' +
-    req.get('host').replace('localhost:3000', 'd2h-backend-server.herokuapp.com/') + 
-    req.url
-  req.pipe(request({ qs:req.query, uri: url })).pipe(res);
-})
 
-// app.all('/', function(req, res, next) {
-//   res.header("Access-Control-Allow-Origin", "*");
-//   res.header("Access-Control-Allow-Headers", "X-Requested-With");
-//   next()
-// });
+app.listen(port, () => console.log(`Server listen on port ${port}!`));
 
 app.use('/api', indexRouter);
-app.listen(port, () => console.log(`Server listen on port ${port}!`));
 
 
 app.use("*", function(req, res) {
