@@ -17,12 +17,12 @@ if (dotenv.error) {
 const app = express();
 const port = process.env.PORT || 8000
 
-// const corsOptions ={
-//     origin: "*",
-//     methods: ["GET", "POST", "PUT", "DELETE"], 
-//     credentials: true,            //access-control-allow-credentials:true
-//     optionSuccessStatus: 200
-// }
+const corsOptions ={
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"], 
+    credentials: true  //access-control-allow-credentials:true
+    
+}
 
 // app.use(function(req, res, next) {
 //   res.header("Access-Control-Allow-Origin", "*");
@@ -37,7 +37,7 @@ app.use(bodyParser.json())
 app.use(express.static(path.join(__dirname, 'app/public')));
 
 
-app.use(cors());
+app.use(cors(corsOptions));
 
 
 app.listen(port, () => console.log(`Server listen on port ${port}!`));
