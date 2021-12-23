@@ -17,12 +17,12 @@ if (dotenv.error) {
 const app = express();
 const port = process.env.PORT || 8000
 
-const corsOptions ={
-    origin: "*",
-    methods: ["GET", "POST", "PUT", "DELETE"], 
-    credentials: true,            //access-control-allow-credentials:true
-    optionSuccessStatus: 200
-}
+// const corsOptions ={
+//     origin: "*",
+//     methods: ["GET", "POST", "PUT", "DELETE"], 
+//     credentials: true,            //access-control-allow-credentials:true
+//     optionSuccessStatus: 200
+// }
 
 // app.use(function(req, res, next) {
 //   res.header("Access-Control-Allow-Origin", "*");
@@ -37,10 +37,11 @@ app.use(bodyParser.json())
 app.use(express.static(path.join(__dirname, 'app/public')));
 
 
-app.use(cors(corsOptions));
+app.use(cors());
+
 app.use('/', function(req, res) {
   var url = 'https://' +
-    req.get('host').replace('localhost:3000', 'https://d2h-backend-server.herokuapp.com/') + 
+    req.get('host').replace('localhost:3000', 'd2h-backend-server.herokuapp.com/') + 
     req.url
   req.pipe(request({ qs:req.query, uri: url })).pipe(res);
 })
