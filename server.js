@@ -17,11 +17,11 @@ if (dotenv.error) {
 const app = express();
 const port = process.env.PORT || 8000
 
-// const corsOptions ={
-//     origin:'http://localhost:3000', 
-//     credentials:true,            //access-control-allow-credentials:true
-//     optionSuccessStatus:200
-// }
+const corsOptions ={
+    origin:'http://127.0.0.1:3000', 
+    credentials:true,            //access-control-allow-credentials:true
+    optionSuccessStatus:200
+}
 
 // app.use(function(req, res, next) {
 //   res.header("Access-Control-Allow-Origin", "*");
@@ -36,13 +36,13 @@ app.use(bodyParser.json())
 app.use(express.static(path.join(__dirname, 'app/public')));
 
 
-// app.use(cors(corsOptions));
+app.use(cors(corsOptions));
 
-app.all('/', function(req, res, next) {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "X-Requested-With");
-  next()
-});
+// app.all('/', function(req, res, next) {
+//   res.header("Access-Control-Allow-Origin", "*");
+//   res.header("Access-Control-Allow-Headers", "X-Requested-With");
+//   next()
+// });
 
 app.use('/api', indexRouter);
 app.listen(port, () => console.log(`Server listen on port ${port}!`));
