@@ -13,7 +13,7 @@ module.exports = (sequelize, Sequelize) => {
         },
         test_answer: {
             field: 'test_answer',
-            type: Sequelize.STRING(1234),
+            type: Sequelize.STRING(5000),
         },
         image_url: {
             field: 'image_url',

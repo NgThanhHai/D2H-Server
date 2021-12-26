@@ -59,6 +59,10 @@ app.use(function(err, req, res, next) {
 });
 
 
-db.sequelize.sync({ force: false })
+db.sequelize.sync({ force: false }).then(() => {
+  console.log("Create database finished successfully");
+}).catch(err => {
+  console.log('Unable to connect to the database: ', err);
+});
 
 module.exports = app;

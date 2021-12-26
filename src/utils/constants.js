@@ -1,0 +1,1 @@
+module.exports = ImageProceesingURL = "https://opencvcheckapi.herokuapp.com/api"

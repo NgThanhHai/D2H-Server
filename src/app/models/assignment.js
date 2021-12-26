@@ -6,7 +6,7 @@ module.exports = (sequelize, Sequelize) => {
             autoIncrement: true
         },
         answer: {
-            type: Sequelize.STRING
+            type: Sequelize.STRING(5000)
         },
         grade: {
             type: Sequelize.FLOAT

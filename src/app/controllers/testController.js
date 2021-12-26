@@ -3,8 +3,13 @@ const CourseUserModel = db.CU;
 const TestConfigModel = db.TestConfig;
 const TestCodeModel = db.TestCode;
 const AssignmentModel = db.Assignment;
+const StudentModel = db.Student;
+const { performance } = require('perf_hooks');
+const imageProcessing = require('./../services/imageProcessingService')
+const { countMatchPercentage, diff } = require('./../services/matchingServices')
 const auth = require('./../../middlewares/jwt');
 var apiResponse = require('./../helpers/apiResponse');
+const { Assignment } = require('./../models');
 const TestModel = db.Test;
 
 exports.createTest = [auth, function (req, res) {
@@ -95,11 +100,12 @@ exports.getAllTest = [auth, function (req, res) {
                     delete test.dataValues.course_user
                 });
                 console.log(tests.dataValues)
-                tests.forEach( unit => {
+                tests.forEach(unit => {
                     unit.test_codes.forEach(answer => {
-                    let objectAnswer = JSON.parse(answer.test_answer)
-                    answer.test_answer = objectAnswer
-                })})
+                        let objectAnswer = JSON.parse(answer.test_answer)
+                        answer.test_answer = objectAnswer
+                    })
+                })
                 return apiResponse.successResponseWithData(res, "Success", tests)
             } else {
                 return apiResponse.successResponse(res, "Test not existed")
@@ -191,7 +197,7 @@ exports.deleteTest = [auth, function (req, res) {
                             testTestId: testId
                         }
                     }]
-                })                    
+                })
                 TestCodeModel.destroy({
                     where: {
                         testTestId: testId
@@ -276,7 +282,7 @@ exports.updateTest = [auth, function (req, res) {
                         test_id: testId
                     }
                 })
-                return apiResponse.successResponse(res, "Update course successfully"); x
+                return apiResponse.successResponse(res, "Update course successfully");
             } else {
                 return apiResponse.conflictResponse(res, "Course not existed or you do not have permission to update");
             }
@@ -285,5 +291,112 @@ exports.updateTest = [auth, function (req, res) {
 
         return apiResponse.ErrorResponse(res, err)
     }
+
+}]
+
+
+exports.submitAssignment = [auth, function (req, res) {
+
+    var testId = req.body.test_id;
+    var assignmentCollectionUrl = req.body.url
+    TestModel.findOne({
+        where: {
+            test_id: testId
+        }
+    }).then(async test => {
+        if (test) {
+            const imageProcessTask = []
+            assignmentCollectionUrl.forEach(assignment => {
+                imageProcessTask.push(imageProcessing(test.test_id, assignment))
+            })
+
+            try {
+
+                const result = await Promise.all(imageProcessTask)
+
+                result.forEach(resolve => {
+
+                    var assigntmentBody = {
+                        image_url: resolve.url,
+                        status: "new",
+                        answer: JSON.stringify(resolve.result.answer)
+                    }
+
+                    AssignmentModel.create(assigntmentBody).then(assignment => {
+
+                        TestCodeModel.findOne({
+                            where: {
+                                test_code: resolve.result.code_id,
+                                testTestId: resolve.test_id
+                            }
+                        }).then(testcode => {
+                            if (testcode) {
+
+                                var result = diff(JSON.parse(assignment.answer), JSON.parse(testcode.test_answer))
+                                var grade = countMatchPercentage(result)
+
+                                AssignmentModel.update(
+                                    {
+                                        grade: grade,
+                                        status: "graded"
+                                    }, {
+                                    where: {
+                                        assignment_id: assignment.assignment_id
+                                    }
+                                }
+                                )
+
+                                AssignmentModel.update({ testCodeTestCodeId: testcode.test_code_id }, {
+                                    where: {
+                                        assignment_id: assignment.assignment_id
+                                    }
+                                })
+                            }
+                        })
+
+                        StudentModel.findOne({
+                            
+                            where: {
+                                student_id: resolve.result.student_id
+                            }
+
+                        }).then(student => {
+                            if (!student) {
+                                var student = {
+                                    student_id: resolve.result.student_id,
+                                    student_name: resolve.result.student_id,
+                                    mail: resolve.result.student_id + '@gmail.com'
+                                }
+                                StudentModel.create(student).then(student => {
+                                    AssignmentModel.update({ studentStudentId: student.student_id }, {
+                                        where: {
+                                            assignment_id: assignment.assignment_id
+                                        }
+                                    })
+                                })
+                            } else {
+                                AssignmentModel.update({ studentStudentId: student.student_id }, {
+                                    where: {
+                                        assignment_id: assignment.assignment_id
+                                    }
+                                })
+                            }
+
+                        })
+                    })
+
+                })
+
+                
+                return apiResponse.successResponse(res, "Grade test successfully!")
+
+            } catch (err) {
+                return apiResponse.badRequestResponse(res, "Something wrong occurs")
+            }
+        } else {
+            return apiResponse.badRequestResponse(res, "Test not exist!")
+        }
+
+    })
 
 }]
