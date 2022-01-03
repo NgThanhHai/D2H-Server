@@ -9,7 +9,7 @@ const imageProcessing = require('./../services/imageProcessingService')
 const { countMatchPercentage, diff } = require('./../services/matchingServices')
 const auth = require('./../../middlewares/jwt');
 var apiResponse = require('./../helpers/apiResponse');
-const { Assignment } = require('./../models');
+const { Assignment, Course } = require('./../models');
 const TestModel = db.Test;
 
 exports.createTest = [auth, function (req, res) {
@@ -78,39 +78,53 @@ exports.getAllTest = [auth, function (req, res) {
     var courseId = req.params.courseId;
 
     try {
-        TestModel.findAll({
-            include: [{
-                model: CourseUserModel, as: "course_user",
-                required: true,
-                where: {
-                    user_id: userId,
-                    course_id: courseId
-                }
-            }],
-            include: [{
-                model: TestConfigModel, as: "test_config",
-                required: true
-            }, {
-                model: TestCodeModel, as: "test_codes",
-                required: true
-            }]
-        }).then(tests => {
-            if (tests.length > 0) {
-                tests.forEach(test => {
-                    delete test.dataValues.course_user
-                });
-                console.log(tests.dataValues)
-                tests.forEach(unit => {
-                    unit.test_codes.forEach(answer => {
-                        let objectAnswer = JSON.parse(answer.test_answer)
-                        answer.test_answer = objectAnswer
-                    })
+        CourseUserModel.findOne({
+            where: {
+                course_id: courseId,
+                user_id: userId
+            }
+        }).then(courseuser => {
+            if(!courseuser){
+                return apiResponse.badRequestResponse(res, "Course do not exist or you do not have permission to access")
+            }
+            else {
+                TestModel.findAll({
+                    include: [{
+                        model: CourseUserModel, as: "course_user",
+                        required: true,
+                        where: {
+                            user_id: userId,
+                            course_id: courseId
+                        }
+                    }],
+                    include: [{
+                        model: TestConfigModel, as: "test_config",
+                        required: true
+                    }, {
+                        model: TestCodeModel, as: "test_codes",
+                        required: true
+                    }]
+                }).then(tests => {
+                    if (tests.length > 0) {
+                        tests.forEach(test => {
+                            delete test.dataValues.course_user
+                        });
+                        console.log(tests.dataValues)
+                        tests.forEach(unit => {
+                            unit.test_codes.forEach(answer => {
+                                let objectAnswer = JSON.parse(answer.test_answer)
+                                answer.test_answer = objectAnswer
+                            })
+                        })
+                        return apiResponse.successResponseWithData(res, "Success", tests)
+                    } else {
+                        return apiResponse.successResponse(res, "Test not existed")
+                    }
                 })
-                return apiResponse.successResponseWithData(res, "Success", tests)
-            } else {
-                return apiResponse.successResponse(res, "Test not existed")
             }
         })
+
+       
     }
     catch (err) {
 
