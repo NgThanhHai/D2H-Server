@@ -89,11 +89,8 @@ exports.getAllTest = [auth, function (req, res) {
     var createdAt = req.query.date
     var nameCondition = test_name ? { test_name: { [Op.like]: `%${test_name}%` } } : null;
     var codeCondition = test_code ? { test_code: { [Op.like]: `%${test_code}%` } } : null;
-    var dateCondition = createdAt ? { createdAt: { [Op.like]: `%${createdAt}%` } } : null;
-    var statusCondition = status ? {status : status} : null;
-    console.log(statusCondition);
     const { limit, offset } = getPagination(page, size);
-    
+
 
     try {
         CourseUserModel.findOne({
@@ -102,62 +99,76 @@ exports.getAllTest = [auth, function (req, res) {
                 user_id: userId
             }
         })
-        .then(courseuser => {
-            if(!courseuser){
-                return apiResponse.badRequestResponse(res, "Course do not exist or you do not have permission to access")
-            }
-            else {
-                TestModel.findAll({
-                    where: nameCondition, statusCondition
-                    ,
-                    limit: limit,
-                    offset: offset,
-                    include: [{
-                        model: CourseUserModel, as: "course_user",
-                        required: true,
-                        where: {
-                            user_id: userId,
-                            course_id: courseId
-                        }
-                    }],
-                    include: [{
-                        model: TestConfigModel, as: "test_config",
-                        required: true
-                    }, {
-                        model: TestCodeModel, as: "test_codes",
-                        required: true,
-                        where: codeCondition
-                    }]
-                }).
-                then(tests => {
-                    if (tests.length > 0) {
-                        
-                        tests.filter(t => !(t.dataValues.createdAt == createdAt))
+            .then(courseuser => {
+                if (!courseuser) {
+                    return apiResponse.badRequestResponse(res, "Course do not exist or you do not have permission to access")
+                }
+                else {
+                    TestModel.findAll({
+                        where: nameCondition
+                        ,
+                        limit: limit,
+                        offset: offset,
+                        include: [{
+                            model: CourseUserModel, as: "course_user",
+                            required: true,
+                            where: {
+                                user_id: userId,
+                                course_id: courseId
+                            }
+                        }],
+                        include: [{
+                            model: TestConfigModel, as: "test_config",
+                            required: true
+                        }, {
+                            model: TestCodeModel, as: "test_codes",
+                            required: true,
+                            where: codeCondition
+                        }]
+                    }).
+                        then(tests => {
+                            if (tests.length > 0) {
+                                
+                                if (createdAt !== undefined) {
 
+                                    var tests = tests.filter(function (t) {
+                                        var month = t.dataValues.createdAt.getUTCMonth() + 1; //months from 1-12
+                                        var day = t.dataValues.createdAt.getUTCDate();
+                                        var year = t.dataValues.createdAt.getUTCFullYear();
+                                        var lookupDate = year + "/" + month + "/" + day;
+                                        return (lookupDate === createdAt)
+                                    })
 
-                        tests.forEach(test => {
-                            
-                            delete test.dataValues.course_user
-                        });
-                        tests.forEach(unit => {
-                            unit.test_codes.forEach(answer => {
-                                let objectAnswer = JSON.parse(answer.test_answer)
-                                answer.test_answer = objectAnswer
-                            })
+                                }
+                                if (status !== undefined){
+                                    var tests = tests.filter(function(t) {
+                                        return status === t.dataValues.status
+                                    })
+                                }
+
+                                tests.forEach(test => {
+
+                                    delete test.dataValues.course_user
+                                });
+                                tests.forEach(unit => {
+                                    unit.test_codes.forEach(answer => {
+                                        let objectAnswer = JSON.parse(answer.test_answer)
+                                        answer.test_answer = objectAnswer
+                                    })
+                                })
+
+                                return apiResponse.successResponseWithPagingData(res, "Success", tests, getPagingData(page))
+                            } else {
+                                return apiResponse.successResponse(res, "Test not existed")
+                            }
+                        }).catch(err => {
+
+                            console.log(err)
                         })
-                        
-                        return apiResponse.successResponseWithPagingData(res, "Success", tests, getPagingData( page))
-                    } else {
-                        return apiResponse.successResponse(res, "Test not existed")
-                    }
-                }).catch(err => {
+                }
+            })
 
-                    console.log(err)
-                })
-            }
-        })
 
-       
     }
     catch (err) {
 
@@ -402,7 +413,7 @@ exports.submitAssignment = [auth, function (req, res) {
                         })
 
                         StudentModel.findOne({
-                            
+
                             where: {
                                 student_id: resolve.result.student_id
                             }
@@ -434,7 +445,7 @@ exports.submitAssignment = [auth, function (req, res) {
 
                 })
 
-                
+
                 return apiResponse.successResponse(res, "Grade test successfully!")
 
             } catch (err) {
