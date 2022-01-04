@@ -17,6 +17,17 @@ exports.successResponseWithData = (res, msg, data) =>{
     res.status(200).json(resData)
 };
 
+exports.successResponseWithPagingData = (res, msg, data, page) =>{
+    var resData = {
+        success : true,
+        message: msg,
+        data: data,
+		currentPage: page
+    };
+
+    res.status(200).json(resData)
+};
+
 exports.ErrorResponse = function (res, msg) {
 	var data = {
 		success: false,

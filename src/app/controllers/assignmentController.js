@@ -7,12 +7,19 @@ const TestModel = db.Test;
 const StudentModel = db.Student;
 const auth = require('./../../middlewares/jwt');
 var apiResponse = require('./../helpers/apiResponse');
+const getPagingData = require('./../helpers/pagingData')
+const getPagination = require('./../helpers/pagination')
 
 exports.getAllAssignment = [auth, function (req, res) {
     let testId = req.body.test_id
     let courseId = req.body.course_id
     let userId = req.user.user_id
 
+    var size = req.query.size
+    var page = req.query.page
+
+
+    const { limit, offset } = getPagination(page, size);
     CourseUserModel.findOne({
         where: {
             course_id: courseId,
@@ -39,6 +46,8 @@ exports.getAllAssignment = [auth, function (req, res) {
                         where: {
                             testTestId : testId
                         },
+                        limit: limit,
+                        offset: offset,
                         include: [{
                             model: AssignmentModel, as: "assigments",
                             required: true,
@@ -47,6 +56,7 @@ exports.getAllAssignment = [auth, function (req, res) {
                             }
                         }]
                     }).then(testcodeCollection => {
+                        
                         if(testcodeCollection.length > 0)
                         {
                             testcodeCollection.forEach(testcode => {
@@ -58,7 +68,7 @@ exports.getAllAssignment = [auth, function (req, res) {
                                 })
                             })
                             
-                            return apiResponse.successResponseWithData(res, "success" ,testcodeCollection)
+                            return apiResponse.successResponseWithPagingData(res, "success" , testcodeCollection, getPagingData(page))
 
                         }else {
                             return apiResponse.badRequestResponse(res, "Test do not have test code")

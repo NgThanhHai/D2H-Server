@@ -10,7 +10,12 @@ const { countMatchPercentage, diff } = require('./../services/matchingServices')
 const auth = require('./../../middlewares/jwt');
 var apiResponse = require('./../helpers/apiResponse');
 const { Assignment, Course } = require('./../models');
+const getPagingData = require('./../helpers/pagingData')
+const getPagination = require('./../helpers/pagination')
+const Sequelize = require('sequelize');
+const Op = Sequelize.Op;
 const TestModel = db.Test;
+const moment = require('moment');
 
 exports.createTest = [auth, function (req, res) {
     var userId = req.user.user_id;
@@ -76,6 +81,19 @@ exports.createTest = [auth, function (req, res) {
 exports.getAllTest = [auth, function (req, res) {
     var userId = req.user.user_id;
     var courseId = req.params.courseId;
+    var size = req.query.size
+    var page = req.query.page
+    var test_name = req.query.name
+    var test_code = req.query.code
+    var status = req.query.status
+    var createdAt = req.query.date
+    var nameCondition = test_name ? { test_name: { [Op.like]: `%${test_name}%` } } : null;
+    var codeCondition = test_code ? { test_code: { [Op.like]: `%${test_code}%` } } : null;
+    var dateCondition = createdAt ? { createdAt: { [Op.like]: `%${createdAt}%` } } : null;
+    var statusCondition = status ? {status : status} : null;
+    console.log(statusCondition);
+    const { limit, offset } = getPagination(page, size);
+    
 
     try {
         CourseUserModel.findOne({
@@ -83,12 +101,17 @@ exports.getAllTest = [auth, function (req, res) {
                 course_id: courseId,
                 user_id: userId
             }
-        }).then(courseuser => {
+        })
+        .then(courseuser => {
             if(!courseuser){
                 return apiResponse.badRequestResponse(res, "Course do not exist or you do not have permission to access")
             }
             else {
                 TestModel.findAll({
+                    where: nameCondition, statusCondition
+                    ,
+                    limit: limit,
+                    offset: offset,
                     include: [{
                         model: CourseUserModel, as: "course_user",
                         required: true,
@@ -102,24 +125,34 @@ exports.getAllTest = [auth, function (req, res) {
                         required: true
                     }, {
                         model: TestCodeModel, as: "test_codes",
-                        required: true
+                        required: true,
+                        where: codeCondition
                     }]
-                }).then(tests => {
+                }).
+                then(tests => {
                     if (tests.length > 0) {
+                        
+                        tests.filter(t => !(t.dataValues.createdAt == createdAt))
+
+
                         tests.forEach(test => {
+                            
                             delete test.dataValues.course_user
                         });
-                        console.log(tests.dataValues)
                         tests.forEach(unit => {
                             unit.test_codes.forEach(answer => {
                                 let objectAnswer = JSON.parse(answer.test_answer)
                                 answer.test_answer = objectAnswer
                             })
                         })
-                        return apiResponse.successResponseWithData(res, "Success", tests)
+                        
+                        return apiResponse.successResponseWithPagingData(res, "Success", tests, getPagingData( page))
                     } else {
                         return apiResponse.successResponse(res, "Test not existed")
                     }
+                }).catch(err => {
+
+                    console.log(err)
                 })
             }
         })

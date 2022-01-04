@@ -4,16 +4,30 @@ const UserModel = db.User;
 const CourseUserModel = db.CU;
 const auth = require('./../../middlewares/jwt');
 var apiResponse = require('./../helpers/apiResponse');
-const course = require('../models/course');
+const getPagingData = require('./../helpers/pagingData')
+const getPagination = require('./../helpers/pagination')
+const Sequelize = require('sequelize');
+const Op = Sequelize.Op;
 
 
 exports.getAllCourses = [auth, function (req, res) {
 
     var user_id = req.user.user_id
+    var size = req.query.size
+    var page = req.query.page
+    var course_name = req.query.name
+
+    var condition = course_name ? { course_name: { [Op.like]: `%${course_name}%` } } : null;
+
+    const { limit, offset } = getPagination(page, size);
+    
 
     try {
         CourseModel.findAll(
             {
+                where: condition,
+                limit: limit,
+                offset: offset,
                 include: [{
                     model: UserModel, as: "user",
                     required: true,
@@ -23,11 +37,12 @@ exports.getAllCourses = [auth, function (req, res) {
                 }]
             }
         ).then((courses) => {
+            
             if (courses.length > 0) {
                 courses.forEach(course => {
                     delete course.dataValues.user
                 });
-                return apiResponse.successResponseWithData(res, "Success", courses)
+                return apiResponse.successResponseWithPagingData(res, "Success", courses, getPagingData( page))
             } else {
                 return apiResponse.successResponseWithData(res, "Success", [])
             }
