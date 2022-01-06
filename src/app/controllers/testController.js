@@ -99,12 +99,12 @@ exports.getAllTest = [auth, function (req, res) {
                 user_id: userId
             }
         })
-            .then(courseuser => {
+            .then( courseuser =>{
                 if (!courseuser) {
                     return apiResponse.badRequestResponse(res, "Course do not exist or you do not have permission to access")
                 }
                 else {
-                    TestModel.findAll({
+                   TestModel.findAndCountAll({
                         where: nameCondition
                         ,
                         limit: limit,
@@ -127,37 +127,36 @@ exports.getAllTest = [auth, function (req, res) {
                         }]
                     }).
                         then(tests => {
-                            if (tests.length > 0) {
-                                
+                            if (tests.rows.length > 0) {
+                                var testCollection = tests.rows
                                 if (createdAt !== undefined) {
 
-                                    var tests = tests.filter(function (t) {
-                                        var month = t.dataValues.createdAt.getUTCMonth() + 1; //months from 1-12
-                                        var day = t.dataValues.createdAt.getUTCDate();
-                                        var year = t.dataValues.createdAt.getUTCFullYear();
-                                        var lookupDate = year + "/" + month + "/" + day;
-                                        return (lookupDate === createdAt)
+                                    var filterTime = moment(createdAt, "DD/MM/YYYY").format("LL").toString();
+                                    var testCollection = testCollection.filter(function (t) {
+                                        var lookupDate = moment(t.dataValues.createdAt, "DD/MM/YYYY").format("LL").toString();
+                                        if(lookupDate === filterTime) {console.log("They are the same")}
+                                        return (lookupDate === filterTime)
                                     })
 
                                 }
                                 if (status !== undefined){
-                                    var tests = tests.filter(function(t) {
+                                    var testCollection = testCollection.filter(function(t) {
                                         return status === t.dataValues.status
                                     })
                                 }
 
-                                tests.forEach(test => {
+                                testCollection.forEach(test => {
 
                                     delete test.dataValues.course_user
                                 });
-                                tests.forEach(unit => {
+                                testCollection.forEach(unit => {
                                     unit.test_codes.forEach(answer => {
                                         let objectAnswer = JSON.parse(answer.test_answer)
                                         answer.test_answer = objectAnswer
                                     })
                                 })
-
-                                return apiResponse.successResponseWithPagingData(res, "Success", tests, getPagingData(page))
+                                return apiResponse.successResponseWithPagingData(res, "Success", testCollection, getPagingData(page), tests.count)
+                                
                             } else {
                                 return apiResponse.successResponse(res, "Test not existed")
                             }

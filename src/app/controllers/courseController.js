@@ -23,7 +23,7 @@ exports.getAllCourses = [auth, function (req, res) {
     
 
     try {
-        CourseModel.findAll(
+        CourseModel.findAndCountAll(
             {
                 where: condition,
                 limit: limit,
@@ -37,12 +37,12 @@ exports.getAllCourses = [auth, function (req, res) {
                 }]
             }
         ).then((courses) => {
-            
-            if (courses.length > 0) {
-                courses.forEach(course => {
+            if (courses.rows.length > 0) {
+                courses.rows.forEach(course => {
                     delete course.dataValues.user
                 });
-                return apiResponse.successResponseWithPagingData(res, "Success", courses, getPagingData( page))
+                
+                return apiResponse.successResponseWithPagingData(res, "Success", courses.rows, getPagingData( page), courses.count)
             } else {
                 return apiResponse.successResponseWithData(res, "Success", [])
             }

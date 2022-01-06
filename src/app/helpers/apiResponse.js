@@ -17,12 +17,13 @@ exports.successResponseWithData = (res, msg, data) =>{
     res.status(200).json(resData)
 };
 
-exports.successResponseWithPagingData = (res, msg, data, page) =>{
+exports.successResponseWithPagingData = (res, msg, data, page, totalItems) =>{
     var resData = {
         success : true,
         message: msg,
         data: data,
-		currentPage: page
+		currentPage: page,
+		totalItems: totalItems
     };
 
     res.status(200).json(resData)
