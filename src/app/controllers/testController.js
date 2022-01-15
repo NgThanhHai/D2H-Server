@@ -4,18 +4,19 @@ const TestConfigModel = db.TestConfig;
 const TestCodeModel = db.TestCode;
 const AssignmentModel = db.Assignment;
 const StudentModel = db.Student;
-const { performance } = require('perf_hooks');
+const StatisticModel = db.Statistic;
+const TestModel = db.Test;
 const imageProcessing = require('./../services/imageProcessingService')
 const { countMatchPercentage, diff } = require('./../services/matchingServices')
+const {average_score, median_score, count_under_marked_score, count_archive_marked_score, highest_score_archived} = require('./../services/descriptiveStatisticsService')
 const auth = require('./../../middlewares/jwt');
 var apiResponse = require('./../helpers/apiResponse');
-const { Assignment, Course } = require('./../models');
 const getPagingData = require('./../helpers/pagingData')
 const getPagination = require('./../helpers/pagination')
 const Sequelize = require('sequelize');
 const Op = Sequelize.Op;
-const TestModel = db.Test;
 const moment = require('moment');
+const testcode = require('../models/testcode');
 
 exports.createTest = [auth, function (req, res) {
     var userId = req.user.user_id;
@@ -99,12 +100,12 @@ exports.getAllTest = [auth, function (req, res) {
                 user_id: userId
             }
         })
-            .then( courseuser =>{
+            .then(courseuser => {
                 if (!courseuser) {
                     return apiResponse.badRequestResponse(res, "Course do not exist or you do not have permission to access")
                 }
                 else {
-                   TestModel.findAndCountAll({
+                    TestModel.findAndCountAll({
                         where: nameCondition
                         ,
                         limit: limit,
@@ -134,13 +135,13 @@ exports.getAllTest = [auth, function (req, res) {
                                     var filterTime = moment(createdAt, "DD/MM/YYYY").format("LL").toString();
                                     var testCollection = testCollection.filter(function (t) {
                                         var lookupDate = moment(t.dataValues.createdAt, "DD/MM/YYYY").format("LL").toString();
-                                        if(lookupDate === filterTime) {console.log("They are the same")}
+                                        if (lookupDate === filterTime) { console.log("They are the same") }
                                         return (lookupDate === filterTime)
                                     })
 
                                 }
-                                if (status !== undefined){
-                                    var testCollection = testCollection.filter(function(t) {
+                                if (status !== undefined) {
+                                    var testCollection = testCollection.filter(function (t) {
                                         return status === t.dataValues.status
                                     })
                                 }
@@ -156,7 +157,7 @@ exports.getAllTest = [auth, function (req, res) {
                                     })
                                 })
                                 return apiResponse.successResponseWithPagingData(res, "Success", testCollection, getPagingData(page), tests.count)
-                                
+
                             } else {
                                 return apiResponse.successResponse(res, "Test not existed")
                             }
@@ -218,6 +219,97 @@ exports.getTest = [auth, function (req, res) {
                 return apiResponse.successResponseWithData(res, "Success", tests)
             } else {
                 return apiResponse.successResponse(res, "Test not existed")
+            }
+        })
+    } catch (err) {
+
+        return apiResponse.ErrorResponse(res, err)
+    }
+
+}]
+
+
+exports.getTestStatistics = [auth, function (req, res) {
+    var userId = req.user.user_id;
+    var testId = req.params.testId;
+
+    try {
+        TestModel.findOne({
+            include: [{
+                model: CourseUserModel, as: "course_user",
+                required: true,
+                where: {
+                    user_id: userId
+                }
+            }],
+            include: [{
+                model: TestConfigModel, as: "test_config",
+                required: true,
+                where: {
+                    testTestId: testId
+                }
+            }, {
+                model: TestCodeModel, as: "test_codes",
+                required: true,
+                where: {
+                    testTestId: testId
+                }
+            }],
+            where: {
+                test_id: testId
+            }
+        }).then(tests => {
+            if (tests) {
+
+                if (tests.status === "new") {
+                    return apiResponse.conflictResponse(res, "Please grade the test first")
+                } else {
+
+                    StatisticModel.findOne({
+                        where: {
+                            testTestId: tests.test_id
+                        }
+                    }).then(statistic => {
+                        if (!statistic) {
+                            TestCodeModel.findAll({
+                                where: {
+                                    testTestId: tests.test_id
+                                },
+                                include: [{
+                                    model: AssignmentModel, as: "assigments",
+                                    required: true
+                                }]
+                            }).then(testcodes => {
+                                let scoreCollection = []
+                                testcodes.forEach(testcode => {
+                                    testcode.assigments.forEach(assigment => {
+                                        scoreCollection.push(assigment.dataValues.grade)
+                                    })
+                                })
+
+                                var body = {
+                                    average_score : average_score(scoreCollection),
+                                    median_score : median_score(scoreCollection),
+                                    noas_under_ten_percent : count_under_marked_score(scoreCollection, 0.1),
+                                    noas_under_fifthty_percent : count_under_marked_score(scoreCollection, 0.5),
+                                    noas_reach_hundred_percent : count_archive_marked_score(scoreCollection, 1),
+                                    score_achived_by_most_assignment : highest_score_archived(scoreCollection)
+                                }
+                                StatisticModel.create(body).then( statistic => {
+                                    return apiResponse.successResponseWithData(res, "Success", statistic)
+                                })
+
+                            })
+                        }
+                        else {
+                            return apiResponse.successResponseWithData(res, "Success", statistic)
+                        }
+                    })
+
+                }
+
+            } else {
+                return apiResponse.conflictResponse(res, "Test not existed")
             }
         })
     } catch (err) {

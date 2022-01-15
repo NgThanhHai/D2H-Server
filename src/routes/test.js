@@ -10,5 +10,5 @@ router.get("/get-test/:testId", TestController.getTest);
 router.delete("/:testId", TestController.deleteTest);
 router.put("/:testId", TestController.updateTest);
 router.post("/grade", TestController.submitAssignment)
-
+router.get("/get-test-statistic/:testId", TestController.getTestStatistics)
 module.exports = router;

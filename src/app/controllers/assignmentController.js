@@ -40,7 +40,7 @@ exports.getAllAssignment = [auth, function (req, res) {
                 }]
             }).then(test => {
                 if (!test) {
-                    return apiResponse.badRequestResponse(res, "Test do not exist");
+                    return apiResponse.conflictResponse(res, "Test do not exist");
                 } else {
                     TestCodeModel.findOne({
                         where: {
