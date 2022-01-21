@@ -23,36 +23,29 @@ exports.getAllCourses = [auth, function (req, res) {
     
 
     try {
-        CourseUserModel.findAll(
+        CourseModel.findAndCountAll(
             {
-                where: condition, 
-                    user_id: user_id
+                limit, 
+                offset,
+                where : condition,
+                include: [{
+                    model: UserModel, as: "user",
+                    required: true,
+                    where: {
+                        user_id: user_id
+                    }
+                }],
                 
             }
         ).then((courseuser) => {
             
-            if (courseuser.length > 0) {
-                let arrayCourseId = []
-                courseuser.forEach((course) => arrayCourseId.push(course.dataValues.course_id))
-                console.log(arrayCourseId)
+            if (courseuser.rows.length > 0) {
 
-                CourseModel.findAndCountAll({
-                    where: {
-                       //condition,
-                        course_id: {
-                            [Op.in]: arrayCourseId
-                          }
-                    },
-                    limit: limit,
-                    offset: offset
-                }).then(courses => {
-                    if(courses.rows.length > 0)
-                    {
-                        return apiResponse.successResponseWithPagingData(res, "Success", courses.rows, getPagingData( page), courses.count)
-                    }else {
-                        return apiResponse.successResponseWithData(res, "Success", [])
-                    }
-                })             
+                courseuser.rows.forEach((course) => {
+                    delete course.dataValues.user
+                })
+
+                return apiResponse.successResponseWithPagingData(res, "Success", courseuser.rows, getPagingData( page), courseuser.count)         
             } else {
                 return apiResponse.successResponseWithData(res, "Success", [])
             }

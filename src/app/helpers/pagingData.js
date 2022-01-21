@@ -1,5 +1,5 @@
 const getPagingData = ( page) => {
-    const currentPage = page ? +page : 0;
+    const currentPage = page ? + page : 1;
   
     return currentPage;
   };
