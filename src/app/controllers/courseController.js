@@ -23,26 +23,36 @@ exports.getAllCourses = [auth, function (req, res) {
     
 
     try {
-        CourseModel.findAndCountAll(
+        CourseUserModel.findAll(
             {
-                where: condition,
-                limit: limit,
-                offset: offset,
-                include: [{
-                    model: UserModel, as: "user",
-                    required: true,
-                    where: {
-                        user_id: user_id 
-                    }
-                }]
-            }
-        ).then((courses) => {
-            if (courses.rows.length > 0) {
-                courses.rows.forEach(course => {
-                    delete course.dataValues.user
-                });
+                where: condition, 
+                    user_id: user_id
                 
-                return apiResponse.successResponseWithPagingData(res, "Success", courses.rows, getPagingData( page), courses.count)
+            }
+        ).then((courseuser) => {
+            
+            if (courseuser.length > 0) {
+                let arrayCourseId = []
+                courseuser.forEach((course) => arrayCourseId.push(course.dataValues.course_id))
+                console.log(arrayCourseId)
+
+                CourseModel.findAndCountAll({
+                    where: {
+                       //condition,
+                        course_id: {
+                            [Op.in]: arrayCourseId
+                          }
+                    },
+                    limit: limit,
+                    offset: offset
+                }).then(courses => {
+                    if(courses.rows.length > 0)
+                    {
+                        return apiResponse.successResponseWithPagingData(res, "Success", courses.rows, getPagingData( page), courses.count)
+                    }else {
+                        return apiResponse.successResponseWithData(res, "Success", [])
+                    }
+                })             
             } else {
                 return apiResponse.successResponseWithData(res, "Success", [])
             }
