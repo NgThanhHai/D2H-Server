@@ -60,6 +60,12 @@ exports.getAllAssignment = [auth, function (req, res) {
                                 assignments.rows.forEach(assignment => {
                                     var objectAnswer = JSON.parse(assignment.dataValues.answer);
                                     assignment.dataValues.answer = objectAnswer
+                                    assignment.dataValues.created_at = assignment.dataValues.createdAt
+                                    assignment.dataValues.updated_at = assignment.dataValues.updatedAt
+
+                                    delete assignment.dataValues.updatedAt
+                                    delete assignment.dataValues.createdAt
+
                                 })
                                 return apiResponse.successResponseWithPagingData(res, "success", assignments.rows, getPagingData(page), assignments.count)
                             })
