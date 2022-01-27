@@ -8,7 +8,7 @@ const StatisticModel = db.Statistic;
 const TestModel = db.Test;
 const imageProcessing = require('./../services/imageProcessingService')
 const { countMatchPercentage, diff } = require('./../services/matchingServices')
-const {average_score, median_score, count_under_marked_score, count_archive_marked_score, highest_score_archived} = require('./../services/descriptiveStatisticsService')
+const { average_score, median_score, count_under_marked_score, count_archive_marked_score, highest_score_archived } = require('./../services/descriptiveStatisticsService')
 const auth = require('./../../middlewares/jwt');
 var apiResponse = require('./../helpers/apiResponse');
 const getPagingData = require('./../helpers/pagingData')
@@ -16,7 +16,8 @@ const getPagination = require('./../helpers/pagination')
 const Sequelize = require('sequelize');
 const Op = Sequelize.Op;
 const moment = require('moment');
-const testcode = require('../models/testcode');
+const convertCase = require('../../utils/convertCase');
+const test = require('../models/test');
 
 exports.createTest = [auth, function (req, res) {
     var userId = req.user.user_id;
@@ -47,28 +48,16 @@ exports.createTest = [auth, function (req, res) {
                             testTestId: test.test_id
                         }
 
-                        TestConfigModel.create(TestConfig)
+                        TestConfigModel.create(TestConfig).then(testconfig => {
+                            testconfig.dataValues = convertCase(testconfig.dataValues)
+                            test.dataValues.config = testconfig
 
-                        req.body.results.forEach(testDetails => {
+                            test.dataValues = convertCase(test.dataValues)
 
-
-                            var testDetail = {
-                                test_code: testDetails.test_code,
-                                test_answer: JSON.stringify(testDetails.answer),
-                                image_url: testDetails.url,
-                                testTestId: test.test_id
-                            }
-
-                            TestCodeModel.create(testDetail)
+                            return apiResponse.successResponseWithData(res, "Create test successfully", test);
                         })
-
-                                
-                        return apiResponse.successResponseWithData(res, "Create test successfully", test);
                     })
-
                 }
-
-
                 else {
                     return apiResponse.conflictResponse(res, "Course not existed");
                 }
@@ -77,6 +66,100 @@ exports.createTest = [auth, function (req, res) {
             return apiResponse.ErrorResponse(res, err)
         }
     }
+}]
+
+exports.submitTestAnswer = [auth, function (req, res) {
+    var userId = req.user.user_id;
+    var testId = req.body.test_id;
+    var courseId = req.body.course_id;
+    var answerCollectionUrl = req.body.url
+
+
+    try {
+        CourseUserModel.findOne({
+            where: {
+                course_id: courseId,
+                user_id: userId
+            }
+        }).then(course => {
+            if (course) {
+                TestModel.findOne({
+                    where: {
+                        test_id: testId
+                    },
+                    include: [{
+                        model: TestConfigModel, as: "test_config",
+                        required: true
+                    }]
+                }).then(async test => {
+                    if (test) {
+                        switch (test.dataValues.test_config.dataValues.test_answer_type) {
+                            case "object": {
+                                req.body.results.forEach(testDetails => {
+                                    var testDetail = {
+                                        test_code: testDetails.test_code,
+                                        test_answer: JSON.stringify(testDetails.answer),
+                                        image_url: "",
+                                        testTestId: test.test_id
+                                    }
+
+                                    TestCodeModel.create(testDetail)
+                                })
+
+                                return apiResponse.successResponseWithData(res, "Submit answer successfully", req.body.results);
+                            }
+                            case "image": {
+                                const imageProcessTask = []
+                                answerCollectionUrl.forEach(assignment => {
+                                    imageProcessTask.push(imageProcessing(test.test_id, assignment))
+                                })
+                                try {
+                                    const result = await Promise.all(imageProcessTask)
+                                    result.forEach(resolve => {
+                                        var testDetail = {
+                                            image_url: resolve.url,
+                                            test_answer: JSON.stringify(resolve.result.answer),
+                                            test_code: resolve.result.code_id,
+                                            testTestId: test.test_id
+                                        }
+                                        
+                                        TestCodeModel.create(testDetail)
+
+                                        resolve.test_code = resolve.result.code_id
+                                        delete resolve.result.code_id
+                                        delete resolve.result.student_id
+                                    })
+                                    
+                                    return apiResponse.successResponseWithData(res, "Submit answer successfully", result);
+                                }catch (err) {
+
+                                }
+                            }
+                            case "csv": {
+
+                            }
+                            default: {
+
+                                return apiResponse.conflictResponse(res, "Something wrong happened");
+                            }
+                        }
+
+                    }
+                    else {
+
+                        return apiResponse.conflictResponse(res, "Test not existed");
+                    }
+                })
+
+            }
+            else {
+                return apiResponse.conflictResponse(res, "Course not existed");
+            }
+        })
+    } catch (err) {
+        return apiResponse.ErrorResponse(res, err)
+    }
+
 }]
 
 
@@ -146,16 +229,16 @@ exports.getAllTest = [auth, function (req, res) {
                                         return status === t.dataValues.status
                                     })
                                 }
-
-                                testCollection.forEach(test => {
-
-                                    delete test.dataValues.course_user
-                                });
+                                
                                 testCollection.forEach(unit => {
+                                    unit.dataValues = convertCase(unit.dataValues)
+                                    delete unit.dataValues.course_user
                                     unit.test_codes.forEach(answer => {
                                         let objectAnswer = JSON.parse(answer.test_answer)
                                         answer.test_answer = objectAnswer
+                                        answer.dataValues = convertCase(answer.dataValues)
                                     })
+                                    unit.test_config.dataValues = convertCase(unit.test_config.dataValues)
                                 })
                                 return apiResponse.successResponseWithPagingData(res, "Success", testCollection, getPagingData(page), tests.count)
 
@@ -215,7 +298,10 @@ exports.getTest = [auth, function (req, res) {
                 tests.dataValues.test_codes.forEach(answer => {
                     let objectAnswer = JSON.parse(answer.test_answer)
                     answer.test_answer = objectAnswer
+                    answer.dataValues = convertCase(answer.dataValues)
                 })
+                tests.dataValues = convertCase(tests.dataValues)
+                tests.dataValues.test_config.dataValues = convertCase(tests.dataValues.test_config.dataValues)
 
                 return apiResponse.successResponseWithData(res, "Success", tests)
             } else {
@@ -289,14 +375,15 @@ exports.getTestStatistics = [auth, function (req, res) {
                                 })
 
                                 var body = {
-                                    average_score : average_score(scoreCollection),
-                                    median_score : median_score(scoreCollection),
-                                    noas_under_ten_percent : count_under_marked_score(scoreCollection, 0.1),
-                                    noas_under_fifthty_percent : count_under_marked_score(scoreCollection, 0.5),
-                                    noas_reach_hundred_percent : count_archive_marked_score(scoreCollection, 1),
-                                    score_achived_by_most_assignment : highest_score_archived(scoreCollection)
+                                    average_score: average_score(scoreCollection),
+                                    median_score: median_score(scoreCollection),
+                                    noas_under_ten_percent: count_under_marked_score(scoreCollection, 0.1),
+                                    noas_under_fifthty_percent: count_under_marked_score(scoreCollection, 0.5),
+                                    noas_reach_hundred_percent: count_archive_marked_score(scoreCollection, 1),
+                                    score_achived_by_most_assignment: highest_score_archived(scoreCollection)
                                 }
-                                StatisticModel.create(body).then( statistic => {
+                                StatisticModel.create(body).then(statistic => {
+                                    statistic.dataValues = convertCase(statistic.dataValues)
                                     return apiResponse.successResponseWithData(res, "Success", statistic)
                                 })
 

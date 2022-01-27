@@ -7,6 +7,7 @@ var apiResponse = require('./../helpers/apiResponse');
 const getPagingData = require('./../helpers/pagingData')
 const getPagination = require('./../helpers/pagination')
 const Sequelize = require('sequelize');
+const convertCase = require('../../utils/convertCase')
 const Op = Sequelize.Op;
 
 
@@ -43,6 +44,7 @@ exports.getAllCourses = [auth, function (req, res) {
 
                 courseuser.rows.forEach((course) => {
                     delete course.dataValues.user
+                    course.dataValues = convertCase(course.dataValues)
                 })
 
                 return apiResponse.successResponseWithPagingData(res, "Success", courseuser.rows, getPagingData( page), courseuser.count)         
@@ -79,6 +81,7 @@ exports.getCourseByCode = [auth, function (req, res) {
                 if (courses) {
 
                     delete courses.dataValues.user
+                    courses.dataValues = convertCase(courses.dataValues)
                     return apiResponse.successResponseWithData(res, "Success", courses)
                 } else {
                     return apiResponse.successResponse(res, "Course not existed")
@@ -110,6 +113,7 @@ exports.getCourseByName = [auth, function (req, res) {
                 if (courses) {
 
                     delete courses.dataValues.user
+                    courses.dataValues = convertCase(courses.dataValues)
                     return apiResponse.successResponseWithData(res, "Success", courses)
                 } else {
                     return apiResponse.successResponse(res, "Course not existed")
@@ -142,6 +146,7 @@ exports.getCourse = [auth, function (req, res) {
                 if (courses) {
 
                     delete courses.dataValues.user
+                    courses.dataValues = convertCase(courses.dataValues)
                     return apiResponse.successResponseWithData(res, "Success", courses)
                 } else {
                     return apiResponse.successResponse(res, "Course not existed")
@@ -173,7 +178,7 @@ exports.createCourse = [auth, function (req, res) {
                         course_id: result.course_id,
                         user_id: user_id,
                     })
-                    returnResult = result
+                    result.dataValues = convertCase(result.dataValues)
                     return apiResponse.successResponseWithData(res, "Create course successfully", result);
                 }
                 );
