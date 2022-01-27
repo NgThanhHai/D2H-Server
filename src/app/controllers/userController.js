@@ -28,16 +28,15 @@ exports.getMyInfo = [auth, function (req, res) {
         }).then(user => {
             if (user) {
                 const newUser = cloneDeep(user.dataValues)
+                console.log(newUser)
 
                 delete newUser.password
                 newUser.email = newUser.mail
                 delete newUser.mail
                 newUser.phone = newUser.phone_number
                 delete newUser.phone_number
-                newUser.created_at = user.dataValues.createdAt
-                newUser.updated_at = user.dataValues.updatedAt
-                delete newUser.createdAt
-                delete newUser.updatedAt
+                newUser.createdAt = user.dataValues.createdAt
+                newUser.updatedAt = user.dataValues.updatedAt
                 return apiResponse.successResponseWithData(res, "Success", newUser)
             } else {
                 return apiResponse.ErrorResponse(res, "Id not found")

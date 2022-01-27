@@ -7,7 +7,6 @@ var apiResponse = require('./../helpers/apiResponse');
 const getPagingData = require('./../helpers/pagingData')
 const getPagination = require('./../helpers/pagination')
 const Sequelize = require('sequelize');
-const convertCamelToSnakeCase = require('../../utils/cloneDeep')
 const Op = Sequelize.Op;
 
 
@@ -44,12 +43,8 @@ exports.getAllCourses = [auth, function (req, res) {
 
                 courseuser.rows.forEach((course) => {
                     delete course.dataValues.user
-                    course.dataValues.created_at = course.dataValues.createdAt
-                    course.dataValues.updated_at = course.dataValues.updatedAt
-                    delete course.dataValues.createdAt
-                    delete course.dataValues.updatedAt
                 })
-                
+
                 return apiResponse.successResponseWithPagingData(res, "Success", courseuser.rows, getPagingData( page), courseuser.count)         
             } else {
                 return apiResponse.successResponseWithData(res, "Success", [])
@@ -84,11 +79,6 @@ exports.getCourseByCode = [auth, function (req, res) {
                 if (courses) {
 
                     delete courses.dataValues.user
-                    courses.dataValues.created_at = courses.dataValues.createdAt
-                    courses.dataValues.updated_at = courses.dataValues.updatedAt
-                    delete courses.dataValues.createdAt
-                    delete courses.dataValues.updatedAt
-
                     return apiResponse.successResponseWithData(res, "Success", courses)
                 } else {
                     return apiResponse.successResponse(res, "Course not existed")
@@ -120,10 +110,6 @@ exports.getCourseByName = [auth, function (req, res) {
                 if (courses) {
 
                     delete courses.dataValues.user
-                    courses.dataValues.created_at = courses.dataValues.createdAt
-                    courses.dataValues.updated_at = courses.dataValues.updatedAt
-                    delete courses.dataValues.createdAt
-                    delete courses.dataValues.updatedAt
                     return apiResponse.successResponseWithData(res, "Success", courses)
                 } else {
                     return apiResponse.successResponse(res, "Course not existed")
@@ -156,10 +142,6 @@ exports.getCourse = [auth, function (req, res) {
                 if (courses) {
 
                     delete courses.dataValues.user
-                    courses.dataValues.created_at = courses.dataValues.createdAt
-                    courses.dataValues.updated_at = courses.dataValues.updatedAt
-                    delete courses.dataValues.createdAt
-                    delete courses.dataValues.updatedAt
                     return apiResponse.successResponseWithData(res, "Success", courses)
                 } else {
                     return apiResponse.successResponse(res, "Course not existed")
@@ -186,15 +168,15 @@ exports.createCourse = [auth, function (req, res) {
                     course_name: req.body.course_name,
                     course_code: req.body.course_code
                 }
-
-                CourseModel.create(Course).then(result =>
+                CourseModel.create(Course).then(result => {
                     CourseUserModel.create({
                         course_id: result.course_id,
                         user_id: user_id,
-                    }));
-
-
-                return apiResponse.successResponse(res, "Create course successfully");
+                    })
+                    returnResult = result
+                    return apiResponse.successResponseWithData(res, "Create course successfully", result);
+                }
+                );
             } else {
                 return apiResponse.conflictResponse(res, "Course code already existed");
             }

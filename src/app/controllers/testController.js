@@ -8,7 +8,7 @@ const StatisticModel = db.Statistic;
 const TestModel = db.Test;
 const imageProcessing = require('./../services/imageProcessingService')
 const { countMatchPercentage, diff } = require('./../services/matchingServices')
-const { average_score, median_score, count_under_marked_score, count_archive_marked_score, highest_score_archived } = require('./../services/descriptiveStatisticsService')
+const {average_score, median_score, count_under_marked_score, count_archive_marked_score, highest_score_archived} = require('./../services/descriptiveStatisticsService')
 const auth = require('./../../middlewares/jwt');
 var apiResponse = require('./../helpers/apiResponse');
 const getPagingData = require('./../helpers/pagingData')
@@ -17,7 +17,6 @@ const Sequelize = require('sequelize');
 const Op = Sequelize.Op;
 const moment = require('moment');
 const testcode = require('../models/testcode');
-const test = require('../models/test');
 
 exports.createTest = [auth, function (req, res) {
     var userId = req.user.user_id;
@@ -63,9 +62,10 @@ exports.createTest = [auth, function (req, res) {
                             TestCodeModel.create(testDetail)
                         })
 
+                                
+                        return apiResponse.successResponseWithData(res, "Create test successfully", test);
                     })
 
-                    return apiResponse.successResponse(res, "Create test successfully");
                 }
 
 
@@ -146,31 +146,15 @@ exports.getAllTest = [auth, function (req, res) {
                                         return status === t.dataValues.status
                                     })
                                 }
-                                
-                                
+
                                 testCollection.forEach(test => {
-
-                                    test.dataValues.created_at = test.dataValues.createdAt
-                                    test.dataValues.updated_at = test.dataValues.updatedAt
-                                    delete test.dataValues.createdAt
-                                    delete test.dataValues.updatedAt
-
-                                    test.dataValues.test_config.dataValues.created_at = test.dataValues.test_config.dataValues.createdAt
-                                    test.dataValues.test_config.dataValues.updated_at = test.dataValues.test_config.dataValues.updatedAt
-                                    delete test.dataValues.test_config.dataValues.createdAt
-                                    delete test.dataValues.test_config.dataValues.updatedAt
 
                                     delete test.dataValues.course_user
                                 });
                                 testCollection.forEach(unit => {
                                     unit.test_codes.forEach(answer => {
-                                        answer.dataValues.created_at = answer.dataValues.createdAt
-                                        answer.dataValues.updated_at = answer.dataValues.updatedAt
-                                        delete answer.dataValues.createdAt
-                                        delete answer.dataValues.updatedAt
                                         let objectAnswer = JSON.parse(answer.test_answer)
                                         answer.test_answer = objectAnswer
-                                        
                                     })
                                 })
                                 return apiResponse.successResponseWithPagingData(res, "Success", testCollection, getPagingData(page), tests.count)
@@ -305,30 +289,20 @@ exports.getTestStatistics = [auth, function (req, res) {
                                 })
 
                                 var body = {
-                                    average_score: average_score(scoreCollection),
-                                    median_score: median_score(scoreCollection),
-                                    noas_under_ten_percent: count_under_marked_score(scoreCollection, 0.1),
-                                    noas_under_fifthty_percent: count_under_marked_score(scoreCollection, 0.5),
-                                    noas_reach_hundred_percent: count_archive_marked_score(scoreCollection, 1),
-                                    score_achived_by_most_assignment: highest_score_archived(scoreCollection)
+                                    average_score : average_score(scoreCollection),
+                                    median_score : median_score(scoreCollection),
+                                    noas_under_ten_percent : count_under_marked_score(scoreCollection, 0.1),
+                                    noas_under_fifthty_percent : count_under_marked_score(scoreCollection, 0.5),
+                                    noas_reach_hundred_percent : count_archive_marked_score(scoreCollection, 1),
+                                    score_achived_by_most_assignment : highest_score_archived(scoreCollection)
                                 }
-                                StatisticModel.create(body).then(statistic => {
-
-                                    statistic.dataValues.created_at = statistic.dataValues.createdAt
-                                    statistic.dataValues.updated_at = statistic.dataValues.updatedAt
-                                    delete statistic.dataValues.createdAt
-                                    delete statistic.dataValues.updatedAt
+                                StatisticModel.create(body).then( statistic => {
                                     return apiResponse.successResponseWithData(res, "Success", statistic)
                                 })
 
                             })
                         }
                         else {
-
-                            statistic.dataValues.created_at = statistic.dataValues.createdAt
-                            statistic.dataValues.updated_at = statistic.dataValues.updatedAt
-                            delete statistic.dataValues.createdAt
-                            delete statistic.dataValues.updatedAt
                             return apiResponse.successResponseWithData(res, "Success", statistic)
                         }
                     })
@@ -562,7 +536,6 @@ exports.submitAssignment = [auth, function (req, res) {
                     })
 
                 })
-
 
                 return apiResponse.successResponse(res, "Grade test successfully!")
 
