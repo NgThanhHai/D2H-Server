@@ -6,6 +6,7 @@ const AssignmentModel = db.Assignment;
 const StudentModel = db.Student;
 const StatisticModel = db.Statistic;
 const TestModel = db.Test;
+const UserModel = db.User;
 const imageProcessing = require('./../services/imageProcessingService')
 const { countMatchPercentage, diff } = require('./../services/matchingServices')
 const { average_score, median_score, count_under_marked_score, count_archive_marked_score, highest_score_archived } = require('./../services/descriptiveStatisticsService')
@@ -17,8 +18,10 @@ const Sequelize = require('sequelize');
 const Op = Sequelize.Op;
 const moment = require('moment');
 const convertCase = require('../../utils/convertCase');
-const test = require('../models/test');
-
+const checkMultipleChoice = require('../../utils/checkMultipleChoice');
+const detectError = require('./../services/detectErrorAssignmentService')
+const { performance } = require('perf_hooks');
+const { sendMail, messageParser } = require('./../services/mailService')
 exports.createTest = [auth, function (req, res) {
     var userId = req.user.user_id;
     var courseId = req.params.courseId;
@@ -42,8 +45,8 @@ exports.createTest = [auth, function (req, res) {
                     TestModel.create(Test).then(test => {
                         var TestConfig = {
                             test_answer_type: req.body.result_type,
-                            is_multiple_choice: req.body.multiple_choice,
-                            total_number_of_question: req.body.number_of_question,
+                            is_multiple_choice: req.body.multiple_choice || false,
+                            total_number_of_question: req.body.number_of_question ? req.body.number_of_question : 0,
                             paper_type: req.body.paper_type,
                             testTestId: test.test_id
                         }
@@ -73,8 +76,6 @@ exports.submitTestAnswer = [auth, function (req, res) {
     var testId = req.body.test_id;
     var courseId = req.body.course_id;
     var answerCollectionUrl = req.body.url
-
-
     try {
         CourseUserModel.findOne({
             where: {
@@ -115,6 +116,9 @@ exports.submitTestAnswer = [auth, function (req, res) {
                                 })
                                 try {
                                     const result = await Promise.all(imageProcessTask)
+
+                                    var isMC = false
+                                    var numberOfQuestion = 0
                                     result.forEach(resolve => {
                                         var testDetail = {
                                             image_url: resolve.url,
@@ -122,24 +126,36 @@ exports.submitTestAnswer = [auth, function (req, res) {
                                             test_code: resolve.result.code_id,
                                             testTestId: test.test_id
                                         }
-                                        
+                                        if (checkMultipleChoice(resolve.result.answer)) {
+                                            isMC = true
+                                        }
                                         TestCodeModel.create(testDetail)
 
                                         resolve.test_code = resolve.result.code_id
                                         delete resolve.result.code_id
                                         delete resolve.result.student_id
-                                    })
-                                    
-                                    return apiResponse.successResponseWithData(res, "Submit answer successfully", result);
-                                }catch (err) {
 
+                                        numberOfQuestion = Object.keys(resolve.result.answer).length
+                                    })
+                                    var TestConfig = {
+                                        is_multiple_choice: isMC,
+                                        total_number_of_question: numberOfQuestion
+                                    }
+
+                                    TestConfigModel.update(TestConfig, {
+                                        where: {
+                                            testTestId: testId
+                                        }
+                                    })
+                                    return apiResponse.successResponseWithData(res, "Submit answer successfully", result);
+                                } catch (err) {
+                                    console.log(err)
                                 }
                             }
                             case "csv": {
 
                             }
                             default: {
-
                                 return apiResponse.conflictResponse(res, "Something wrong happened");
                             }
                         }
@@ -190,24 +206,15 @@ exports.getAllTest = [auth, function (req, res) {
                 }
                 else {
                     TestModel.findAndCountAll({
-                        where: nameCondition
+                        where: nameCondition,
+                        where: { courseUserCourseUserId: courseuser.dataValues.course_user_id }
                         ,
                         limit: limit,
                         offset: offset,
                         include: [{
-                            model: CourseUserModel, as: "course_user",
-                            required: true,
-                            where: {
-                                user_id: userId,
-                                course_id: courseId
-                            }
-                        }],
-                        include: [{
-                            model: TestConfigModel, as: "test_config",
-                            required: true
+                            model: TestConfigModel, as: "test_config"
                         }, {
                             model: TestCodeModel, as: "test_codes",
-                            required: true,
                             where: codeCondition
                         }]
                     }).
@@ -229,7 +236,7 @@ exports.getAllTest = [auth, function (req, res) {
                                         return status === t.dataValues.status
                                     })
                                 }
-                                
+
                                 testCollection.forEach(unit => {
                                     unit.dataValues = convertCase(unit.dataValues)
                                     delete unit.dataValues.course_user
@@ -533,9 +540,11 @@ exports.updateTest = [auth, function (req, res) {
 
 
 exports.submitAssignment = [auth, function (req, res) {
-
+    var userId = req.user.user_id
     var testId = req.body.test_id;
     var assignmentCollectionUrl = req.body.url
+
+    var startTime = performance.now();
     TestModel.findOne({
         where: {
             test_id: testId
@@ -546,84 +555,102 @@ exports.submitAssignment = [auth, function (req, res) {
             assignmentCollectionUrl.forEach(assignment => {
                 imageProcessTask.push(imageProcessing(test.test_id, assignment))
             })
-
             try {
-
                 const result = await Promise.all(imageProcessTask)
-
+                var errorAssignmentCollection = []
                 result.forEach(resolve => {
 
-                    var assigntmentBody = {
-                        image_url: resolve.url,
-                        status: "new",
-                        answer: JSON.stringify(resolve.result.answer)
-                    }
+                    if (detectError(resolve) != "") {
+                        var errorAssignment = resolve
+                        errorAssignment.error = detectError(resolve)
+                        errorAssignmentCollection.push(errorAssignment)
+                    } else {
+                        var assigntmentBody = {
+                            image_url: resolve.url,
+                            status: "new",
+                            answer: JSON.stringify(resolve.result.answer)
+                        }
 
-                    AssignmentModel.create(assigntmentBody).then(assignment => {
+                        AssignmentModel.create(assigntmentBody).then(assignment => {
 
-                        TestCodeModel.findOne({
-                            where: {
-                                test_code: resolve.result.code_id,
-                                testTestId: resolve.test_id
-                            }
-                        }).then(testcode => {
-                            if (testcode) {
-
-                                var result = diff(JSON.parse(assignment.answer), JSON.parse(testcode.test_answer))
-                                var grade = countMatchPercentage(result)
-
-                                AssignmentModel.update(
-                                    {
-                                        grade: grade,
-                                        status: "graded"
-                                    }, {
-                                    where: {
-                                        assignment_id: assignment.assignment_id
-                                    }
+                            TestCodeModel.findOne({
+                                where: {
+                                    test_code: resolve.result.code_id,
+                                    testTestId: resolve.test_id
                                 }
-                                )
+                            }).then(testcode => {
+                                if (testcode) {
 
-                                AssignmentModel.update({ testCodeTestCodeId: testcode.test_code_id }, {
-                                    where: {
-                                        assignment_id: assignment.assignment_id
+                                    var result = diff(JSON.parse(assignment.answer), JSON.parse(testcode.test_answer))
+                                    var grade = countMatchPercentage(result)
+
+                                    AssignmentModel.update(
+                                        {
+                                            grade: grade,
+                                            status: "graded"
+                                        }, {
+                                        where: {
+                                            assignment_id: assignment.assignment_id
+                                        }
                                     }
-                                })
-                            }
-                        })
+                                    )
 
-                        StudentModel.findOne({
-
-                            where: {
-                                student_id: resolve.result.student_id
-                            }
-
-                        }).then(student => {
-                            if (!student) {
-                                var student = {
-                                    student_id: resolve.result.student_id,
-                                    student_name: resolve.result.student_id,
-                                    mail: resolve.result.student_id + '@gmail.com'
+                                    AssignmentModel.update({ testCodeTestCodeId: testcode.test_code_id }, {
+                                        where: {
+                                            assignment_id: assignment.assignment_id
+                                        }
+                                    })
                                 }
-                                StudentModel.create(student).then(student => {
+                            })
+
+                            StudentModel.findOne({
+
+                                where: {
+                                    student_id: resolve.result.student_id
+                                }
+
+                            }).then(student => {
+                                if (!student) {
+                                    var student = {
+                                        student_id: resolve.result.student_id,
+                                        student_name: resolve.result.student_id,
+                                        mail: resolve.result.student_id + '@gmail.com'
+                                    }
+                                    StudentModel.create(student).then(student => {
+                                        AssignmentModel.update({ studentStudentId: student.student_id }, {
+                                            where: {
+                                                assignment_id: assignment.assignment_id
+                                            }
+                                        })
+                                    })
+                                } else {
                                     AssignmentModel.update({ studentStudentId: student.student_id }, {
                                         where: {
                                             assignment_id: assignment.assignment_id
                                         }
                                     })
-                                })
-                            } else {
-                                AssignmentModel.update({ studentStudentId: student.student_id }, {
-                                    where: {
-                                        assignment_id: assignment.assignment_id
-                                    }
-                                })
-                            }
+                                }
 
+                            })
                         })
-                    })
+                    }
 
                 })
+                UserModel.findOne({
+                    where: {
+                        user_id: userId
+                    }
+                }).then(user => {
+                    if (!user) { next() }
+                    else {
+                        var message = messageParser(errorAssignmentCollection)
+                        console.log(message)
+                        sendMail(user.dataValues.mail, "Submit Assigment Completed", message)
+                    }
+                })
 
+                var endTime = performance.now();
+                console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
                 return apiResponse.successResponse(res, "Grade test successfully!")
 
             } catch (err) {

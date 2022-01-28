@@ -1,20 +1,12 @@
 const axios = require('axios');
 const ImageProceesingURL = require('../../utils/constants')
-const db = require('./../models');
-const { countMatchPercentage, diff } = require('./../services/matchingServices')
-const AssignmnetModel = db.Assignment;
-const TestCodeModel = db.TestCode;
-const TestModel = db.Test;
-const StudentModel = db.Student;
 
-const processImage = function (test_id, url) {
-
-    return new Promise((resolve, reject) => {
-
-        var postBody = JSON.stringify({
+const imageProcessing = (test_id, url) => {
+    return new Promise(function(resolve, reject) {
+            var postBody = JSON.stringify({
             test_id: test_id,
             url: url
-        })
+            })
 
         axios({
             method: 'post',
@@ -28,9 +20,8 @@ const processImage = function (test_id, url) {
 
                 resolve(response.data)
             }
-        })
-        
-    })
+        });
+    });
 }
 
-module.exports = processImage
+module.exports = imageProcessing
