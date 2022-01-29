@@ -1,14 +1,14 @@
 module.exports = (sequelize, Sequelize) => {
     const Student = sequelize.define("student", {
+        
         student_name: {
             type: Sequelize.STRING,
             allowNull: false
         },
         student_id: {
             type: Sequelize.STRING,
-            allowNull: false,
+            allowNull: false, 
             primaryKey: true,
-            unique: true
         },
         mail: {
             type: Sequelize.STRING,

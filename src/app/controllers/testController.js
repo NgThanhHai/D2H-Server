@@ -22,6 +22,7 @@ const checkMultipleChoice = require('../../utils/checkMultipleChoice');
 const detectError = require('./../services/detectErrorAssignmentService')
 const { performance } = require('perf_hooks');
 const { sendMail, messageParser } = require('./../services/mailService')
+
 exports.createTest = [auth, function (req, res) {
     var userId = req.user.user_id;
     var courseId = req.params.courseId;
@@ -159,14 +160,12 @@ exports.submitTestAnswer = [auth, function (req, res) {
                                 return apiResponse.conflictResponse(res, "Something wrong happened");
                             }
                         }
-
                     }
                     else {
 
                         return apiResponse.conflictResponse(res, "Test not existed");
                     }
                 })
-
             }
             else {
                 return apiResponse.conflictResponse(res, "Course not existed");
@@ -177,7 +176,6 @@ exports.submitTestAnswer = [auth, function (req, res) {
     }
 
 }]
-
 
 exports.getAllTest = [auth, function (req, res) {
     var userId = req.user.user_id;
@@ -258,15 +256,11 @@ exports.getAllTest = [auth, function (req, res) {
                         })
                 }
             })
-
-
     }
     catch (err) {
 
         return apiResponse.ErrorResponse(res, err)
     }
-
-
 }]
 
 exports.getTest = [auth, function (req, res) {
@@ -319,9 +313,7 @@ exports.getTest = [auth, function (req, res) {
 
         return apiResponse.ErrorResponse(res, err)
     }
-
 }]
-
 
 exports.getTestStatistics = [auth, function (req, res) {
     var userId = req.user.user_id;
@@ -354,7 +346,6 @@ exports.getTestStatistics = [auth, function (req, res) {
             }
         }).then(tests => {
             if (tests) {
-
                 if (tests.status === "new") {
                     return apiResponse.conflictResponse(res, "Please grade the test first")
                 } else {
@@ -554,9 +545,10 @@ exports.submitAssignment = [auth, function (req, res) {
             const imageProcessTask = []
             assignmentCollectionUrl.forEach(assignment => {
                 imageProcessTask.push(imageProcessing(test.test_id, assignment))
-            })
+            })          
+            let result = await Promise.all(imageProcessTask)
             try {
-                const result = await Promise.all(imageProcessTask)
+
                 var errorAssignmentCollection = []
                 result.forEach(resolve => {
 
@@ -584,18 +576,11 @@ exports.submitAssignment = [auth, function (req, res) {
                                     var result = diff(JSON.parse(assignment.answer), JSON.parse(testcode.test_answer))
                                     var grade = countMatchPercentage(result)
 
-                                    AssignmentModel.update(
-                                        {
-                                            grade: grade,
-                                            status: "graded"
-                                        }, {
-                                        where: {
-                                            assignment_id: assignment.assignment_id
-                                        }
-                                    }
-                                    )
-
-                                    AssignmentModel.update({ testCodeTestCodeId: testcode.test_code_id }, {
+                                    AssignmentModel.update({
+                                        testCodeTestCodeId: testcode.test_code_id,
+                                        grade: grade,
+                                        status: "graded"
+                                    }, {
                                         where: {
                                             assignment_id: assignment.assignment_id
                                         }
@@ -604,11 +589,9 @@ exports.submitAssignment = [auth, function (req, res) {
                             })
 
                             StudentModel.findOne({
-
                                 where: {
                                     student_id: resolve.result.student_id
                                 }
-
                             }).then(student => {
                                 if (!student) {
                                     var student = {
@@ -636,6 +619,14 @@ exports.submitAssignment = [auth, function (req, res) {
                     }
 
                 })
+
+                TestModel.update({
+                    status: 'graded'
+                }, {
+                    where: {
+                        test_id : test.test_id
+                }})
+
                 UserModel.findOne({
                     where: {
                         user_id: userId
@@ -648,7 +639,6 @@ exports.submitAssignment = [auth, function (req, res) {
                         sendMail(user.dataValues.mail, "Submit Assigment Completed", message)
                     }
                 })
-
                 var endTime = performance.now();
                 console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
                 return apiResponse.successResponse(res, "Grade test successfully!")
