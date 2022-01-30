@@ -1,5 +1,5 @@
 const axios = require('axios');
-const ImageProceesingURL = require('../../utils/constants')
+const ImageProcessingBasicURL = require('../../utils/constants')
 
 const imageProcessing = (test_id, url) => {
     return new Promise(function(resolve, reject) {

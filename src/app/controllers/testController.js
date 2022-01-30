@@ -542,6 +542,7 @@ exports.submitAssignment = [auth, function (req, res) {
         }
     }).then(async test => {
         if (test) {
+
             const imageProcessTask = []
             assignmentCollectionUrl.forEach(assignment => {
                 imageProcessTask.push(imageProcessing(test.test_id, assignment))
@@ -550,8 +551,8 @@ exports.submitAssignment = [auth, function (req, res) {
             try {
 
                 var errorAssignmentCollection = []
+                                
                 result.forEach(resolve => {
-
                     if (detectError(resolve) != "") {
                         var errorAssignment = resolve
                         errorAssignment.error = detectError(resolve)
@@ -564,7 +565,6 @@ exports.submitAssignment = [auth, function (req, res) {
                         }
 
                         AssignmentModel.create(assigntmentBody).then(assignment => {
-
                             TestCodeModel.findOne({
                                 where: {
                                     test_code: resolve.result.code_id,
@@ -635,13 +635,39 @@ exports.submitAssignment = [auth, function (req, res) {
                     if (!user) { next() }
                     else {
                         var message = messageParser(errorAssignmentCollection)
-                        console.log(message)
                         sendMail(user.dataValues.mail, "Submit Assigment Completed", message)
                     }
                 })
-                var endTime = performance.now();
-                console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
-                return apiResponse.successResponse(res, "Grade test successfully!")
+                if(result.length == 1)
+                {
+                    AssignmentModel.findOne({
+                        where : {
+                            image_url : assignmentCollectionUrl[0]
+                        },
+                        order: [ [ 'createdAt', 'DESC' ]],
+                    }).then(assignment => {
+                        if(assignment)
+                        {
+                            var objectAnswer = JSON.parse(assignment.dataValues.answer);
+                            assignment.dataValues.answer = objectAnswer
+                            assignment.dataValues = convertCase(assignment.dataValues)
+
+
+                            var endTime = performance.now();
+                            console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
+                            return apiResponse.successResponseWithData(res, "Grade test successfully!", assignment)
+                        }else {
+                            var endTime = performance.now();
+                            console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
+                            return apiResponse.badRequestResponse(res, "Something wrong occurs")
+                        }
+                    })
+                }else {
+
+                    var endTime = performance.now();
+                    console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
+                    return apiResponse.successResponse(res, "Grade test successfully!")
+                }
 
             } catch (err) {
                 return apiResponse.badRequestResponse(res, "Something wrong occurs")
