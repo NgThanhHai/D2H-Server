@@ -7,6 +7,8 @@ const StudentModel = db.Student;
 const StatisticModel = db.Statistic;
 const TestModel = db.Test;
 const UserModel = db.User;
+var streamBuffers = require('stream-buffers');
+var excel = require('exceljs');
 const imageProcessing = require('./../services/imageProcessingService')
 const { countMatchPercentage, diff } = require('./../services/matchingServices')
 const { average_score, median_score, count_under_marked_score, count_archive_marked_score, highest_score_archived } = require('./../services/descriptiveStatisticsService')
@@ -17,6 +19,7 @@ const getPagination = require('./../helpers/pagination')
 const Sequelize = require('sequelize');
 const Op = Sequelize.Op;
 const moment = require('moment');
+const fileUploader = require('./../../configs/cloudinary.config');
 const convertCase = require('../../utils/convertCase');
 const checkMultipleChoice = require('../../utils/checkMultipleChoice');
 const detectError = require('./../services/detectErrorAssignmentService')
@@ -546,12 +549,12 @@ exports.submitAssignment = [auth, function (req, res) {
             const imageProcessTask = []
             assignmentCollectionUrl.forEach(assignment => {
                 imageProcessTask.push(imageProcessing(test.test_id, assignment))
-            })          
+            })
             let result = await Promise.all(imageProcessTask)
             try {
 
                 var errorAssignmentCollection = []
-                                
+
                 result.forEach(resolve => {
                     if (detectError(resolve) != "") {
                         var errorAssignment = resolve
@@ -624,8 +627,9 @@ exports.submitAssignment = [auth, function (req, res) {
                     status: 'graded'
                 }, {
                     where: {
-                        test_id : test.test_id
-                }})
+                        test_id: test.test_id
+                    }
+                })
 
                 UserModel.findOne({
                     where: {
@@ -638,16 +642,14 @@ exports.submitAssignment = [auth, function (req, res) {
                         sendMail(user.dataValues.mail, "Submit Assigment Completed", message)
                     }
                 })
-                if(result.length == 1)
-                {
+                if (result.length == 1) {
                     AssignmentModel.findOne({
-                        where : {
-                            image_url : assignmentCollectionUrl[0]
+                        where: {
+                            image_url: assignmentCollectionUrl[0]
                         },
-                        order: [ [ 'createdAt', 'DESC' ]],
+                        order: [['createdAt', 'DESC']],
                     }).then(assignment => {
-                        if(assignment)
-                        {
+                        if (assignment) {
                             var objectAnswer = JSON.parse(assignment.dataValues.answer);
                             assignment.dataValues.answer = objectAnswer
                             assignment.dataValues = convertCase(assignment.dataValues)
@@ -656,13 +658,13 @@ exports.submitAssignment = [auth, function (req, res) {
                             var endTime = performance.now();
                             console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
                             return apiResponse.successResponseWithData(res, "Grade test successfully!", assignment)
-                        }else {
+                        } else {
                             var endTime = performance.now();
                             console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
                             return apiResponse.badRequestResponse(res, "Something wrong occurs")
                         }
                     })
-                }else {
+                } else {
 
                     var endTime = performance.now();
                     console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
@@ -677,5 +679,96 @@ exports.submitAssignment = [auth, function (req, res) {
         }
 
     })
+
+}]
+
+
+
+exports.exportTest = [auth, async function (req, res) {
+    var testIdCollection = [
+        "1",
+        "2"
+    ]
+    var userId = req.user.user_id
+    const workbook = new excel.Workbook();
+    if (testIdCollection.length > 0)
+    {
+        for (var testIndex = 0; testIndex < testIdCollection.length; testIndex++) {
+            var test = await TestModel.findOne({
+                where: {
+                    test_id: testIdCollection[testIndex]
+                }
+            })
+            if (!test) {
+                continue;
+            } else {
+
+                const worksheet = workbook.addWorksheet(test.dataValues.test_name + " " +  testIndex);
+                worksheet.columns = [
+                    { header: 'Number', key: 'no' },
+                    { header: 'Test Code', key: 'test_code' },
+                    { header: 'Test Code Answer', key: 'test_answer' },
+                    { header: 'Test Code Image', key: 'image_url_test_code' },
+                    { header: 'Student Id', key: 'student_id' },
+                    { header: 'Assignment Image', key: 'image_url_assignment' },
+                    { header: 'Student Answer', key: 'student_answer' },
+                    { header: 'Grade', key: 'grade' }
+                ];
+
+                let data = await TestCodeModel.findAll({
+                    where: {
+                        testTestId: test.dataValues.test_id
+                    },
+
+                })
+                let rows = []
+                if (data.length > 0) {
+                    let count = 0
+                    for (var i = 0; i < data.length; i++) {
+                        let assignment = await AssignmentModel.findAll({
+                            where: {
+                                testCodeTestCodeId: data[i].test_code_id
+                            }
+                        })
+                        for (var j = 0; j < assignment.length; j++) {
+                            count++
+                            var row = {
+                                no: count,
+                                test_code: data[i].test_code,
+                                test_answer: data[i].test_answer,
+                                image_url_test_code: data[i].image_url,
+                                student_id: assignment[j].studentStudentId,
+                                image_url_assignment: assignment[j].image_url,
+                                student_answer: assignment[j].answer,
+                                grade: assignment[j].grade * 10
+                            }
+                            rows.push(row)
+                        }
+                    }
+
+                } else {
+                    continue;
+                }
+
+                rows.forEach(row => {
+                    worksheet.addRow(row);
+                })
+                worksheet.getRow(1).eachCell((cell) => {
+                    cell.font = { bold: true };
+                });
+
+            }  
+            
+        }
+        var fileName = 'FileName.xlsx';
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader("Content-Disposition", "attachment; filename=" + fileName);
+        workbook.xlsx.write(res).then(function(){
+            res.end();
+        });
+     } else {
+        return apiResponse.badRequestResponse(res, "No test to export")
+    }
 
 }]

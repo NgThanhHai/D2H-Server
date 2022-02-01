@@ -10,7 +10,7 @@ const imageProcessing = (test_id, url) => {
 
         axios({
             method: 'post',
-            url: ImageProceesingURL,
+            url: ImageProcessingBasicURL,
             data: postBody
         }).then(response => {
             if (!response.data)

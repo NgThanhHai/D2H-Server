@@ -16,6 +16,14 @@ exports.successResponseWithData = (res, msg, data) =>{
 
     res.status(200).json(resData)
 };
+exports.successResponseWithFile = (res, msg, data) =>{
+    var resData = {
+        success : true,
+        message: msg
+    };
+
+    res.status(200).json(resData)
+};
 
 exports.successResponseWithPagingData = (res, msg, data, page, totalItems) =>{
     var resData = {
