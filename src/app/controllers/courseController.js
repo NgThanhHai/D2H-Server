@@ -17,18 +17,35 @@ exports.getAllCourses = [auth, function (req, res) {
     var size = req.query.size
     var page = req.query.page
     var course_name = req.query.name
-
-    var condition = course_name ? { course_name: { [Op.like]: `%${course_name}%` } } : null;
-
+    var course_code = req.query.code
+    var conditionName = course_name ? { course_name : { [Op.like]: `%${course_name}%` } } : null;
+    var conditionCode = course_code ? { course_code : { [Op.like]: `%${course_code}%` } } : null;
     const { limit, offset } = getPagination(page, size);
-    
-
+    var condition = ""
+    if(conditionName)
+    {
+        if(conditionCode)
+        {
+            condition = { [Op.or]: [conditionName, conditionCode] }
+        }else {
+            condition = conditionName
+        }
+    }else {
+        if(conditionCode)
+        {
+            condition = conditionCode
+        }else {
+            condition = null
+        }
+    }
     try {
         CourseModel.findAndCountAll(
             {
                 limit, 
                 offset,
-                where : condition,
+                where : 
+                condition
+                ,
                 include: [{
                     model: UserModel, as: "user",
                     required: true,

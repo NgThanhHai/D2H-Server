@@ -47,9 +47,7 @@ exports.signUp = function(req, res) {
                 .then(data => {
                     let userData = {
 						user_id : data.user_id
-						
 					}
-					console.log(data.user_id)
 					const jwtPayload = userData;
 					const jwtData = {expiresIn: access_token_life};
 					const secret = access_token_secret;
