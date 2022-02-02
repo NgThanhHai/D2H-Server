@@ -29,6 +29,7 @@ const { sendMail, messageParser } = require('./../services/mailService')
 exports.createTest = [auth, function (req, res) {
     var userId = req.user.user_id;
     var courseId = req.params.courseId;
+    var answerCollectionUrl = req.body.url
     if (!req.body) {
         return apiResponse.badRequestResponse(res, "Lack of required data")
     } else {
@@ -38,7 +39,7 @@ exports.createTest = [auth, function (req, res) {
                     course_id: courseId,
                     user_id: userId
                 }
-            }).then(course => {
+            }).then(async course => {
                 if (course) {
                     var Test = {
                         test_name: req.body.test_name,
@@ -46,7 +47,7 @@ exports.createTest = [auth, function (req, res) {
                         graded_date: ``,
                         courseUserCourseUserId: course.course_user_id
                     }
-                    TestModel.create(Test).then(test => {
+                    TestModel.create(Test).then(async test => {
                         var TestConfig = {
                             test_answer_type: req.body.result_type,
                             is_multiple_choice: req.body.multiple_choice || false,
@@ -55,14 +56,82 @@ exports.createTest = [auth, function (req, res) {
                             testTestId: test.test_id
                         }
 
-                        TestConfigModel.create(TestConfig).then(testconfig => {
-                            testconfig.dataValues = convertCase(testconfig.dataValues)
-                            test.dataValues.config = testconfig
+                        var testconfig = await TestConfigModel.create(TestConfig)
+                        testconfig.dataValues = convertCase(testconfig.dataValues)
+                        test.dataValues.config = testconfig
+                        test.dataValues = convertCase(test.dataValues)
 
-                            test.dataValues = convertCase(test.dataValues)
+                        switch (testconfig.dataValues.test_answer_type) {
+                            case "object": {
+                                test.dataValues.results = []
+                                for(var i =0;i < req.body.results.length; i++){
+                                    var testDetail = {
+                                        test_code: req.body.results[i].test_code,
+                                        test_answer: JSON.stringify(req.body.results[i].answer),
+                                        image_url: "",
+                                        testTestId: test.test_id
+                                    }
 
-                            return apiResponse.successResponseWithData(res, "Create test successfully", test);
-                        })
+                                    var testcode = await TestCodeModel.create(testDetail)
+                                    test.dataValues.results.push(testcode)
+                                }
+                                for(var index = 0; index < test.dataValues.results.length; index++){
+                                    test.dataValues.results[index].dataValues.test_answer = JSON.parse(test.dataValues.results[index].dataValues.test_answer)
+                                    test.dataValues.results[index].dataValues = convertCase(test.dataValues.results[index].dataValues)
+                                }
+                                return apiResponse.successResponseWithData(res, "Submit answer successfully", test);
+                            }
+                            case "image": { 
+                                const imageProcessTask = []
+                                answerCollectionUrl.forEach(assignment => {
+                                    imageProcessTask.push(imageProcessing(test.test_id, assignment))
+                                })
+                                try {
+                                    const result = await Promise.all(imageProcessTask)
+
+                                    var isMC = false
+                                    var numberOfQuestion = 0
+                                    result.forEach(resolve => {
+                                        var testDetail = {
+                                            image_url: resolve.url,
+                                            test_answer: JSON.stringify(resolve.result.answer),
+                                            test_code: resolve.result.code_id,
+                                            testTestId: test.test_id
+                                        }
+                                        if (checkMultipleChoice(resolve.result.answer)) {
+                                            isMC = true
+                                        }
+                                        TestCodeModel.create(testDetail)
+
+                                        resolve.test_code = resolve.result.code_id
+                                        delete resolve.result.code_id
+                                        delete resolve.result.student_id
+
+                                        numberOfQuestion = Object.keys(resolve.result.answer).length
+                                    })
+                                    var TestConfig = {
+                                        is_multiple_choice: isMC,
+                                        total_number_of_question: numberOfQuestion
+                                    }
+
+                                    TestConfigModel.update(TestConfig, {
+                                        where: {
+                                            testTestId: test.test_id
+                                        }
+                                    })
+                                    test.dataValues.results = result
+                                    return apiResponse.successResponseWithData(res, "Submit answer successfully", test);
+                                } catch (err) {
+                                    console.log(err)
+                                }
+                            }
+                            case "csv": {
+
+                            }
+                            default: {
+                                return apiResponse.conflictResponse(res, "Something wrong happened");
+                            }
+                        }
                     })
                 }
                 else {
@@ -685,11 +754,8 @@ exports.submitAssignment = [auth, function (req, res) {
 
 
 exports.exportTest = [auth, async function (req, res) {
-    var testIdCollection = [
-        "1",
-        "2"
-    ]
-    var userId = req.user.user_id
+    var testIdCollection =  req.body.test_id
+   // var userId = req.user.user_id
     const workbook = new excel.Workbook();
     if (testIdCollection.length > 0)
     {
