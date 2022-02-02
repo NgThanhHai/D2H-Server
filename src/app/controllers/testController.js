@@ -754,10 +754,10 @@ exports.submitAssignment = [auth, function (req, res) {
 
 exports.exportTest = [auth, async function (req, res) {
     var testIdCollection = req.body.test_id
-    var startDate = req.query.start_date ? req.query.start_date : null
-    var endDate = req.query.end_date ? req.query.end_date : null
-    var startGrade = req.query.start_grade ? req.query.start_grade : 0
-    var endGrade = req.query.end_grade ? req.query.end_grade : 10
+    var startDate = req.body.start_date ? req.body.start_date : null
+    var endDate = req.body.end_date ? req.body.end_date : null
+    var startGrade = req.body.start_grade ? req.body.start_grade : 0
+    var endGrade = req.body.end_grade ? req.body.end_grade : 10
     // var userId = req.user.user_id
     const workbook = new excel.Workbook();
     if (testIdCollection.length > 0) {
