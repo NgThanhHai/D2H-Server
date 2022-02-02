@@ -64,7 +64,7 @@ exports.createTest = [auth, function (req, res) {
                         switch (testconfig.dataValues.test_answer_type) {
                             case "object": {
                                 test.dataValues.results = []
-                                for(var i =0;i < req.body.results.length; i++){
+                                for (var i = 0; i < req.body.results.length; i++) {
                                     var testDetail = {
                                         test_code: req.body.results[i].test_code,
                                         test_answer: JSON.stringify(req.body.results[i].answer),
@@ -75,13 +75,13 @@ exports.createTest = [auth, function (req, res) {
                                     var testcode = await TestCodeModel.create(testDetail)
                                     test.dataValues.results.push(testcode)
                                 }
-                                for(var index = 0; index < test.dataValues.results.length; index++){
+                                for (var index = 0; index < test.dataValues.results.length; index++) {
                                     test.dataValues.results[index].dataValues.test_answer = JSON.parse(test.dataValues.results[index].dataValues.test_answer)
                                     test.dataValues.results[index].dataValues = convertCase(test.dataValues.results[index].dataValues)
                                 }
                                 return apiResponse.successResponseWithData(res, "Submit answer successfully", test);
                             }
-                            case "image": { 
+                            case "image": {
                                 const imageProcessTask = []
                                 answerCollectionUrl.forEach(assignment => {
                                     imageProcessTask.push(imageProcessing(test.test_id, assignment))
@@ -296,7 +296,6 @@ exports.getAllTest = [auth, function (req, res) {
                                     var filterTime = moment(createdAt, "DD/MM/YYYY").format("LL").toString();
                                     var testCollection = testCollection.filter(function (t) {
                                         var lookupDate = moment(t.dataValues.createdAt, "DD/MM/YYYY").format("LL").toString();
-                                        if (lookupDate === filterTime) { console.log("They are the same") }
                                         return (lookupDate === filterTime)
                                     })
 
@@ -754,11 +753,14 @@ exports.submitAssignment = [auth, function (req, res) {
 
 
 exports.exportTest = [auth, async function (req, res) {
-    var testIdCollection =  req.body.test_id
-   // var userId = req.user.user_id
+    var testIdCollection = req.body.test_id
+    var startDate = req.query.start_date ? req.query.start_date : null
+    var endDate = req.query.end_date ? req.query.end_date : null
+    var startGrade = req.query.start_grade ? req.query.start_grade : 0
+    var endGrade = req.query.end_grade ? req.query.end_grade : 10
+    // var userId = req.user.user_id
     const workbook = new excel.Workbook();
-    if (testIdCollection.length > 0)
-    {
+    if (testIdCollection.length > 0) {
         for (var testIndex = 0; testIndex < testIdCollection.length; testIndex++) {
             var test = await TestModel.findOne({
                 where: {
@@ -769,7 +771,7 @@ exports.exportTest = [auth, async function (req, res) {
                 continue;
             } else {
 
-                const worksheet = workbook.addWorksheet(test.dataValues.test_name + " " +  testIndex);
+                const worksheet = workbook.addWorksheet(test.dataValues.test_name + " " + testIndex);
                 worksheet.columns = [
                     { header: 'Number', key: 'no' },
                     { header: 'Test Code', key: 'test_code' },
@@ -790,12 +792,28 @@ exports.exportTest = [auth, async function (req, res) {
                 let rows = []
                 if (data.length > 0) {
                     let count = 0
+
+                    if(startDate && endDate) {
+                        var upperFilterTime = moment(endDate, "DD/MM/YYYY").format("LL")
+                        var lowerFilterTime = moment(startDate, "DD/MM/YYYY").format("LL")
+                    }
+                    
                     for (var i = 0; i < data.length; i++) {
                         let assignment = await AssignmentModel.findAll({
                             where: {
                                 testCodeTestCodeId: data[i].test_code_id
                             }
                         })
+                        assignment = assignment.filter(function (t) {
+                            return t.grade*10 >= startGrade && t.grade*10 <= endGrade
+                        })
+                        if(upperFilterTime && lowerFilterTime)
+                        {
+                            assignment = assignment.filter(function (t) {
+                                var lookupDate = moment(t.dataValues.createdAt, "DD/MM/YYYY").format("LL")
+                                    return (lookupDate <= upperFilterTime && lookupDate >= lowerFilterTime)
+                            })
+                        }
                         for (var j = 0; j < assignment.length; j++) {
                             count++
                             var row = {
@@ -823,17 +841,17 @@ exports.exportTest = [auth, async function (req, res) {
                     cell.font = { bold: true };
                 });
 
-            }  
-            
+            }
+
         }
-        var fileName = 'FileName.xlsx';
+        var fileName = 'export_test_grade.xlsx';
 
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.setHeader("Content-Disposition", "attachment; filename=" + fileName);
-        workbook.xlsx.write(res).then(function(){
+        workbook.xlsx.write(res).then(function () {
             res.end();
         });
-     } else {
+    } else {
         return apiResponse.badRequestResponse(res, "No test to export")
     }
 
