@@ -68,7 +68,15 @@ exports.login = [
 	check('username','Username must be specified').exists().isLength({min: 1}),
 	check("password",'Password must be specified').exists().isLength({min: 1}),
 	(req, res) => {
-
+		var requsername = req.body.username ? req.body.username : null;
+		var reqmail = req.body.mail  ? req.body.mail : null
+		var condition = ""
+		if(requsername){
+			
+			condition = { username: requsername} ;
+		}else {
+			condition = { mail : reqmail } ;
+		}
 		try{
 			const errors = validationResult(req);
 			if(!errors.isEmpty){
@@ -76,9 +84,7 @@ exports.login = [
 			}
 			else{
 				UserModel.findOne({
-                    where : {
-						username: req.body.username
-					}
+                    where : condition
                     })
 					.then(user =>{
 					if(user){
