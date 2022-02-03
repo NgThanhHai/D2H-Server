@@ -11,8 +11,7 @@ module.exports = (sequelize, Sequelize) => {
         },
         course_code: {
             type: Sequelize.STRING,
-            allowNull: false,
-            unique: true
+            allowNull: false
         }
     }, {timestamps: true}, {underscored: true});
     return Course

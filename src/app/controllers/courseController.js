@@ -174,7 +174,7 @@ exports.getCourse = [auth, function (req, res) {
     }
 }]
 
-exports.createCourse = [auth, function (req, res) {
+exports.createCourse = [auth, async function (req, res) {
     
     var user_id = req.user.user_id
 
@@ -182,9 +182,19 @@ exports.createCourse = [auth, function (req, res) {
         return apiResponse.badRequestResponse(res, "Lack of required data")
     }
     try {
-        CourseModel.findOne({ where: { course_code: req.body.course_code } }).then(course => {
+        let courseuser = await CourseUserModel.findAll({
+            where: {
+                user_id: user_id
+            }
+        })
+        
+        CourseModel.findOne({
+             where: {
+                  course_code: req.body.course_code,
 
-            if (!course) {
+                } 
+            }).then(course => {
+            if (!course || !courseuser.some(c => c.dataValues.course_id === course.dataValues.course_id)) {
 
                 var Course = {
                     course_name: req.body.course_name,
@@ -192,19 +202,17 @@ exports.createCourse = [auth, function (req, res) {
                 }
                 CourseModel.create(Course).then(result => {
                     CourseUserModel.create({
-                        course_id: result.course_id,
+                        course_id: result.dataValues.course_id,
                         user_id: user_id,
                     })
                     result.dataValues = convertCase(result.dataValues)
                     return apiResponse.successResponseWithData(res, "Create course successfully", result);
-                }
-                );
+                });
             } else {
                 return apiResponse.conflictResponse(res, "Course code already existed");
             }
         })
     } catch (ex) {
-        console.log(ex)
         return apiResponse.ErrorResponse(req, ex)
     }
 }]
