@@ -69,7 +69,7 @@ exports.login = [
 	check("password",'Password must be specified').exists().isLength({min: 1}),
 	(req, res) => {
 		var requsername = req.body.username ? req.body.username : null;
-		var reqmail = req.body.mail  ? req.body.mail : null
+		var reqmail = req.body.email  ? req.body.email : null
 		var condition = ""
 		if(requsername){
 			

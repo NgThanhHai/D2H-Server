@@ -12,7 +12,6 @@ const Op = Sequelize.Op;
 
 
 exports.getAllCourses = [auth, function (req, res) {
-
     var user_id = req.user.user_id
     var size = req.query.size
     var page = req.query.page
@@ -20,7 +19,7 @@ exports.getAllCourses = [auth, function (req, res) {
     var course_code = req.query.code
     var conditionName = course_name ? { course_name : { [Op.like]: `%${course_name}%` } } : null;
     var conditionCode = course_code ? { course_code : { [Op.like]: `%${course_code}%` } } : null;
-    const { limit, offset } = getPagination(page, size);
+    const { limit, offset } = getPagination(page, size);    
     var condition = ""
     if(conditionName)
     {
@@ -43,9 +42,7 @@ exports.getAllCourses = [auth, function (req, res) {
             {
                 limit, 
                 offset,
-                where : 
-                condition
-                ,
+                where : condition,
                 include: [{
                     model: UserModel, as: "user",
                     required: true,
@@ -56,7 +53,6 @@ exports.getAllCourses = [auth, function (req, res) {
                 
             }
         ).then((courseuser) => {
-            
             if (courseuser.rows.length > 0) {
 
                 courseuser.rows.forEach((course) => {
