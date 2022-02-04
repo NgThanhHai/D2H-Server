@@ -704,34 +704,51 @@ exports.submitAssignment = [auth, function (req, res) {
                         user_id: userId
                     }
                 }).then(user => {
-                    if (!user) { next() }
+                    if (!user) {  }
                     else {
                         var message = messageParser(errorAssignmentCollection)
                         sendMail(user.dataValues.mail, "Submit Assigment Completed", message)
                     }
                 })
-                if (result.length == 1) {
-                    AssignmentModel.findOne({
-                        where: {
-                            image_url: assignmentCollectionUrl[0]
-                        },
-                        order: [['createdAt', 'DESC']],
-                    }).then(assignment => {
-                        if (assignment) {
-                            var objectAnswer = JSON.parse(assignment.dataValues.answer);
-                            assignment.dataValues.answer = objectAnswer
-                            assignment.dataValues = convertCase(assignment.dataValues)
-
-
-                            var endTime = performance.now();
-                            console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
-                            return apiResponse.successResponseWithData(res, "Grade test successfully!", assignment)
-                        } else {
-                            var endTime = performance.now();
-                            console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
-                            return apiResponse.badRequestResponse(res, "Something wrong occurs")
-                        }
-                    })
+                if (result.length == 1 ) {
+                    if(errorAssignmentCollection.length === 0)
+                    {
+                        AssignmentModel.findOne({
+                            where: {
+                                image_url: assignmentCollectionUrl[0]
+                            },
+                            order: [['createdAt', 'DESC']],
+                        }).then(assignment => {
+                            if (assignment) {
+                                var objectAnswer = JSON.parse(assignment.dataValues.answer);
+                                assignment.dataValues.answer = objectAnswer
+                                assignment.dataValues = convertCase(assignment.dataValues)
+    
+    
+                                var endTime = performance.now();
+                                console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
+                                return apiResponse.successResponseWithData(res, "Grade test successfully!", assignment)
+                            } else {
+                                var endTime = performance.now();
+                                console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
+                                return apiResponse.badRequestResponse(res, "Something wrong occurs")
+                            }
+                        })
+                    }else {
+                        switch(errorAssignmentCollection[0].error) {
+                            case "TestCodeNull":
+                                return apiResponse.conflictResponse(res, "Test code not found")
+                            case "TestCodeWrong":
+                                return apiResponse.conflictResponse(res, "Wrong test code")
+                            case "StudentIdNull":
+                                return apiResponse.conflictResponse(res, "Student id not found")
+                            case "StudentIdWrong":
+                                return apiResponse.conflictResponse(res, "Student id wrong")
+                            default:
+                                return apiResponse.conflictResponse(res, "Something wrong occurs")
+                          }
+                    }
+                    
                 } else {
 
                     var endTime = performance.now();
