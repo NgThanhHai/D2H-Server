@@ -254,15 +254,13 @@ exports.getAllTest = [auth, function (req, res) {
     var courseId = req.params.courseId;
     var size = req.query.size
     var page = req.query.page
-    var test_name = req.query.name
-    var test_code = req.query.code
+    var conditionName = req.query.name
     var status = req.query.status
-    var createdAt = req.query.date
-    var nameCondition = test_name ? { test_name: { [Op.like]: `%${test_name}%` } } : null;
-    var codeCondition = test_code ? { test_code: { [Op.like]: `%${test_code}%` } } : null;
     const { limit, offset } = getPagination(page, size);
 
-
+    var startDate = req.query.start_date ? req.query.start_date : null
+    var endDate = req.query.end_date ? req.query.end_date : null
+    
     try {
         CourseUserModel.findOne({
             where: {
@@ -276,30 +274,33 @@ exports.getAllTest = [auth, function (req, res) {
                 }
                 else {
                     TestModel.findAndCountAll({
-                        where: nameCondition,
-                        where: { courseUserCourseUserId: courseuser.dataValues.course_user_id }
+                        where: { courseUserCourseUserId: courseuser.dataValues.course_user_id}
                         ,
                         limit: limit,
                         offset: offset,
                         include: [{
                             model: TestConfigModel, as: "test_config"
                         }, {
-                            model: TestCodeModel, as: "test_codes",
-                            where: codeCondition
+                            model: TestCodeModel, as: "test_codes"
                         }]
                     }).
                         then(tests => {
                             if (tests.rows.length > 0) {
                                 var testCollection = tests.rows
-                                if (createdAt !== undefined) {
 
-                                    var filterTime = moment(createdAt, "DD/MM/YYYY").format("LL").toString();
-                                    var testCollection = testCollection.filter(function (t) {
-                                        var lookupDate = moment(t.dataValues.createdAt, "DD/MM/YYYY").format("LL").toString();
-                                        return (lookupDate === filterTime)
+                                testCollection = testCollection.filter(function (t) {
+                                        return (t.dataValues.test_name.includes(conditionName))
+                                })
+
+                                if(startDate && endDate) {
+                                    var upperFilterTime = moment(endDate, "DD/MM/YYYY").format("LL")
+                                    var lowerFilterTime = moment(startDate, "DD/MM/YYYY").format("LL")
+                                    testCollection = testCollection.filter(function (t) {
+                                        var lookupDate = moment(t.dataValues.createdAt, "DD/MM/YYYY").format("LL")
+                                            return (new Date(lookupDate) <= new Date(upperFilterTime) && new Date(lookupDate) >= new Date(lowerFilterTime))
                                     })
-
                                 }
+                                
                                 if (status !== undefined) {
                                     var testCollection = testCollection.filter(function (t) {
                                         return status === t.dataValues.status
@@ -316,7 +317,7 @@ exports.getAllTest = [auth, function (req, res) {
                                     })
                                     unit.test_config.dataValues = convertCase(unit.test_config.dataValues)
                                 })
-                                return apiResponse.successResponseWithPagingData(res, "Success", testCollection, getPagingData(page), tests.count)
+                                return apiResponse.successResponseWithPagingData(res, "Success", testCollection, getPagingData(page), testCollection.length)
 
                             } else {
                                 return apiResponse.successResponse(res, "Test not existed")
@@ -610,13 +611,20 @@ exports.submitAssignment = [auth, function (req, res) {
     TestModel.findOne({
         where: {
             test_id: testId
-        }
+        },
+        include: [{
+            model: TestConfigModel, as: "test_config",
+            required: true,
+            where: {
+                testTestId: testId
+            }
+        }]
     }).then(async test => {
         if (test) {
 
             const imageProcessTask = []
             assignmentCollectionUrl.forEach(assignment => {
-                imageProcessTask.push(imageProcessing(test.test_id, assignment))
+                imageProcessTask.push(imageProcessing(test.test_id, test.test_config.paper_type ,assignment))
             })
             let result = await Promise.all(imageProcessTask)
             try {
@@ -692,7 +700,8 @@ exports.submitAssignment = [auth, function (req, res) {
                 })
 
                 TestModel.update({
-                    status: 'graded'
+                    status: 'graded',
+                    graded_date: new Date()
                 }, {
                     where: {
                         test_id: test.test_id

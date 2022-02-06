@@ -1,10 +1,11 @@
 const axios = require('axios');
 const ImageProcessingBasicURL = require('../../utils/constants')
 
-const imageProcessing = (test_id, url) => {
+const imageProcessing = (test_id, type, url) => {
     return new Promise(function(resolve, reject) {
             var postBody = JSON.stringify({
             test_id: test_id,
+            type: type,
             url: url
             })
 
