@@ -287,21 +287,32 @@ exports.getAllTest = [auth, function (req, res) {
                         then(tests => {
                             if (tests.rows.length > 0) {
                                 var testCollection = tests.rows
-
-                                testCollection = testCollection.filter(function (t) {
+                                if(!conditionName || conditionName === "" )
+                                {
+                                    
+                                }else {
+                                    testCollection = testCollection.filter(function (t) {
                                         return (t.dataValues.test_name.includes(conditionName))
-                                })
+                                    })
+                                }
 
-                                if(startDate && endDate) {
-                                    var upperFilterTime = moment(endDate, "DD/MM/YYYY").format("LL")
+                                if(startDate && startDate !== "" ) {
                                     var lowerFilterTime = moment(startDate, "DD/MM/YYYY").format("LL")
                                     testCollection = testCollection.filter(function (t) {
                                         var lookupDate = moment(t.dataValues.createdAt, "DD/MM/YYYY").format("LL")
-                                            return (new Date(lookupDate) <= new Date(upperFilterTime) && new Date(lookupDate) >= new Date(lowerFilterTime))
+                                            return ( new Date(lookupDate) >= new Date(lowerFilterTime))
                                     })
                                 }
-                                
-                                if (status !== undefined) {
+                                if(endDate && endDate !=="")
+                                {
+                                    var upperFilterTime = moment(endDate, "DD/MM/YYYY").format("LL")
+                                    testCollection = testCollection.filter(function (t) {
+                                        var lookupDate = moment(t.dataValues.createdAt, "DD/MM/YYYY").format("LL")
+                                            return (new Date(lookupDate) <= new Date(upperFilterTime) )
+                                    })
+
+                                }
+                                if (status !== undefined && status !== "") {
                                     var testCollection = testCollection.filter(function (t) {
                                         return status === t.dataValues.status
                                     })
