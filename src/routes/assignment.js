@@ -4,7 +4,7 @@ const AssignmentController = require("../app/controllers/assignmentController")
 
 var router = express.Router()
 
-router.get('/', AssignmentController.getAllAssignment)
+router.post('/', AssignmentController.getAllAssignment)
 
 
 module.exports = router;
