@@ -84,14 +84,14 @@ exports.createTest = [auth, function (req, res) {
                             case "image": {
                                 const imageProcessTask = []
                                 answerCollectionUrl.forEach(assignment => {
-                                    imageProcessTask.push(imageProcessing(test.test_id, assignment))
+                                    imageProcessTask.push(imageProcessing(test.test_id, Number(testconfig.paper_type) , assignment))
                                 })
+                                const result = await Promise.all(imageProcessTask)
                                 try {
-                                    const result = await Promise.all(imageProcessTask)
-
                                     var isMC = false
                                     var numberOfQuestion = 0
-                                    result.forEach(resolve => {
+                                    for(var i = 0; i< result.length; i++) {
+                                        let resolve = result[i]
                                         var testDetail = {
                                             image_url: resolve.url,
                                             test_answer: JSON.stringify(resolve.result.answer),
@@ -108,7 +108,7 @@ exports.createTest = [auth, function (req, res) {
                                         delete resolve.result.student_id
 
                                         numberOfQuestion = Object.keys(resolve.result.answer).length
-                                    })
+                                    }
                                     var TestConfig = {
                                         is_multiple_choice: isMC,
                                         total_number_of_question: numberOfQuestion
@@ -120,6 +120,8 @@ exports.createTest = [auth, function (req, res) {
                                         }
                                     })
                                     test.dataValues.results = result
+                                    test.dataValues.config.is_multiple_choice = isMC
+                                    test.dataValues.config.total_number_of_question = numberOfQuestion
                                     return apiResponse.successResponseWithData(res, "Submit answer successfully", test);
                                 } catch (err) {
                                     return apiResponse.ErrorResponse(res, err)
@@ -222,7 +224,7 @@ exports.submitTestAnswer = [auth, function (req, res) {
                                     })
                                     return apiResponse.successResponseWithData(res, "Submit answer successfully", result);
                                 } catch (err) {
-                                    console.log(err)
+                                    return apiResponse.ErrorResponse(res, err)
                                 }
                             }
                             case "csv": {
@@ -777,7 +779,7 @@ exports.submitAssignment = [auth, function (req, res) {
                 }
 
             } catch (err) {
-                return apiResponse.badRequestResponse(res, "Something wrong occurs")
+                return apiResponse.ErrorResponse(res, err)
             }
         } else {
             return apiResponse.badRequestResponse(res, "Test not exist!")

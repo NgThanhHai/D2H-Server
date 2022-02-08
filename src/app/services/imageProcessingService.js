@@ -18,7 +18,6 @@ const imageProcessing = (test_id, type, url) => {
             {
                 reject("Error when calling api!")
             }else {
-
                 resolve(response.data)
             }
         });
