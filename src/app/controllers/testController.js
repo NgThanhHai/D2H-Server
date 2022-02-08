@@ -712,7 +712,7 @@ exports.submitAssignment = [auth, function (req, res) {
                         })
                     }
 
-                    if(index === result.length)
+                    if(+index === result.length)
                     {
                         TestModel.update({
                             status: 'graded',
