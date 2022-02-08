@@ -9,6 +9,7 @@ const auth = require('./../../middlewares/jwt');
 var apiResponse = require('./../helpers/apiResponse');
 const getPagingData = require('./../helpers/pagingData')
 const getPagination = require('./../helpers/pagination')
+const convertCase = require('../../utils/convertCase');
 
 exports.getAllAssignment = [auth, function (req, res) {
     let testId = req.body.test_id
@@ -60,6 +61,7 @@ exports.getAllAssignment = [auth, function (req, res) {
                                 assignments.rows.forEach(assignment => {
                                     var objectAnswer = JSON.parse(assignment.dataValues.answer);
                                     assignment.dataValues.answer = objectAnswer
+                                    assignments.dataValues = convertCase(assignments.dataValues)
                                 })
                                 return apiResponse.successResponseWithPagingData(res, "success", assignments.rows, getPagingData(page), assignments.count)
                             })
