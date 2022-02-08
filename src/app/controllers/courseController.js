@@ -187,7 +187,6 @@ exports.createCourse = [auth, async function (req, res) {
         CourseModel.findOne({
              where: {
                   course_code: req.body.course_code,
-
                 } 
             }).then(course => {
             if (!course || !courseuser.some(c => c.dataValues.course_id === course.dataValues.course_id)) {
@@ -209,7 +208,7 @@ exports.createCourse = [auth, async function (req, res) {
             }
         })
     } catch (ex) {
-        return apiResponse.ErrorResponse(req, ex)
+        return apiResponse.ErrorResponse(res, ex)
     }
 }]
 
