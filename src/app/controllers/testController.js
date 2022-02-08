@@ -389,7 +389,7 @@ exports.getTest = [auth, function (req, res) {
 
                 return apiResponse.successResponseWithData(res, "Success", tests)
             } else {
-                return apiResponse.successResponse(res, "Test not existed")
+                return apiResponse.conflictResponse(res, "Test not existed")
             }
         })
     } catch (err) {
