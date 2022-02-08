@@ -7,7 +7,8 @@ const StudentModel = db.Student;
 const StatisticModel = db.Statistic;
 const TestModel = db.Test;
 const UserModel = db.User;
-var streamBuffers = require('stream-buffers');
+const https = require('https'); // or 'https' for https:// URLs
+const fs = require('fs');
 var excel = require('exceljs');
 const imageProcessing = require('./../services/imageProcessingService')
 const { countMatchPercentage, diff } = require('./../services/matchingServices')
@@ -84,13 +85,13 @@ exports.createTest = [auth, function (req, res) {
                             case "image": {
                                 const imageProcessTask = []
                                 answerCollectionUrl.forEach(assignment => {
-                                    imageProcessTask.push(imageProcessing(test.test_id, Number(testconfig.paper_type) , assignment))
+                                    imageProcessTask.push(imageProcessing(test.test_id, Number(testconfig.paper_type), assignment))
                                 })
                                 const result = await Promise.all(imageProcessTask)
                                 try {
                                     var isMC = false
                                     var numberOfQuestion = 0
-                                    for(var i = 0; i< result.length; i++) {
+                                    for (var i = 0; i < result.length; i++) {
                                         let resolve = result[i]
                                         var testDetail = {
                                             image_url: resolve.url,
@@ -128,7 +129,7 @@ exports.createTest = [auth, function (req, res) {
                                 }
                             }
                             case "csv": {
-
+                                
                             }
                             default: {
                                 return apiResponse.conflictResponse(res, "Something wrong happened");
@@ -228,7 +229,10 @@ exports.submitTestAnswer = [auth, function (req, res) {
                                 }
                             }
                             case "csv": {
-
+                                const file = fs.createWriteStream("file.jpg");
+                                const request = http.get("https://res.cloudinary.com/dik3xxedu/image/upload/v1644311803/p7ynvawbc37eh3jvcckw.png", function (response) {
+                                    response.pipe(file);
+                                });
                             }
                             default: {
                                 return apiResponse.conflictResponse(res, "Something wrong happened");
@@ -262,7 +266,7 @@ exports.getAllTest = [auth, function (req, res) {
 
     var startDate = req.query.start_date ? req.query.start_date : null
     var endDate = req.query.end_date ? req.query.end_date : null
-    
+
     try {
         CourseUserModel.findOne({
             where: {
@@ -276,7 +280,7 @@ exports.getAllTest = [auth, function (req, res) {
                 }
                 else {
                     TestModel.findAndCountAll({
-                        where: { courseUserCourseUserId: courseuser.dataValues.course_user_id}
+                        where: { courseUserCourseUserId: courseuser.dataValues.course_user_id }
                         ,
                         limit: limit,
                         offset: offset,
@@ -289,28 +293,26 @@ exports.getAllTest = [auth, function (req, res) {
                         then(tests => {
                             if (tests.rows.length > 0) {
                                 var testCollection = tests.rows
-                                if(!conditionName || conditionName === "" )
-                                {
-                                    
-                                }else {
+                                if (!conditionName || conditionName === "") {
+
+                                } else {
                                     testCollection = testCollection.filter(function (t) {
                                         return (t.dataValues.test_name.includes(conditionName))
                                     })
                                 }
 
-                                if(startDate && startDate !== "" ) {
+                                if (startDate && startDate !== "") {
                                     var lowerFilterTime = moment(startDate, "DD/MM/YYYY").format("LL")
                                     testCollection = testCollection.filter(function (t) {
                                         var lookupDate = moment(t.dataValues.createdAt, "DD/MM/YYYY").format("LL")
-                                            return ( new Date(lookupDate) >= new Date(lowerFilterTime))
+                                        return (new Date(lookupDate) >= new Date(lowerFilterTime))
                                     })
                                 }
-                                if(endDate && endDate !=="")
-                                {
+                                if (endDate && endDate !== "") {
                                     var upperFilterTime = moment(endDate, "DD/MM/YYYY").format("LL")
                                     testCollection = testCollection.filter(function (t) {
                                         var lookupDate = moment(t.dataValues.createdAt, "DD/MM/YYYY").format("LL")
-                                            return (new Date(lookupDate) <= new Date(upperFilterTime) )
+                                        return (new Date(lookupDate) <= new Date(upperFilterTime))
                                     })
 
                                 }
@@ -637,14 +639,14 @@ exports.submitAssignment = [auth, function (req, res) {
 
             const imageProcessTask = []
             assignmentCollectionUrl.forEach(assignment => {
-                imageProcessTask.push(imageProcessing(test.test_id, test.test_config.paper_type ,assignment))
+                imageProcessTask.push(imageProcessing(test.test_id, test.test_config.paper_type, assignment))
             })
             let result = await Promise.all(imageProcessTask)
             try {
 
                 var errorAssignmentCollection = []
-
-                result.forEach(resolve => {
+                for(var index = 0; index < result.length; index++) {
+                    let resolve = result[index]
                     if (detectError(resolve) != "") {
                         var errorAssignment = resolve
                         errorAssignment.error = detectError(resolve)
@@ -710,74 +712,76 @@ exports.submitAssignment = [auth, function (req, res) {
                         })
                     }
 
-                })
-
-                TestModel.update({
-                    status: 'graded',
-                    graded_date: new Date()
-                }, {
-                    where: {
-                        test_id: test.test_id
-                    }
-                })
-
-                UserModel.findOne({
-                    where: {
-                        user_id: userId
-                    }
-                }).then(user => {
-                    if (!user) {  }
-                    else {
-                        var message = messageParser(errorAssignmentCollection)
-                        sendMail(user.dataValues.mail, "Submit Assigment Completed", message)
-                    }
-                })
-                if (result.length == 1 ) {
-                    if(errorAssignmentCollection.length === 0)
+                    if(index === result.length)
                     {
-                        AssignmentModel.findOne({
+                        TestModel.update({
+                            status: 'graded',
+                            graded_date: new Date()
+                        }, {
                             where: {
-                                image_url: assignmentCollectionUrl[0]
-                            },
-                            order: [['createdAt', 'DESC']],
-                        }).then(assignment => {
-                            if (assignment) {
-                                var objectAnswer = JSON.parse(assignment.dataValues.answer);
-                                assignment.dataValues.answer = objectAnswer
-                                assignment.dataValues = convertCase(assignment.dataValues)
-    
-    
-                                var endTime = performance.now();
-                                console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
-                                return apiResponse.successResponseWithData(res, "Grade test successfully!", assignment)
-                            } else {
-                                var endTime = performance.now();
-                                console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
-                                return apiResponse.badRequestResponse(res, "Something wrong occurs")
+                                test_id: test.test_id
                             }
                         })
-                    }else {
-                        switch(errorAssignmentCollection[0].error) {
-                            case "TestCodeNull":
-                                return apiResponse.conflictResponse(res, "Test code not found")
-                            case "TestCodeWrong":
-                                return apiResponse.conflictResponse(res, "Wrong test code")
-                            case "StudentIdNull":
-                                return apiResponse.conflictResponse(res, "Student id not found")
-                            case "StudentIdWrong":
-                                return apiResponse.conflictResponse(res, "Student id wrong")
-                            default:
-                                return apiResponse.conflictResponse(res, "Something wrong occurs")
-                          }
+        
+                        UserModel.findOne({
+                            where: {
+                                user_id: userId
+                            }
+                        }).then(user => {
+                            if (!user) { }
+                            else {
+                                var message = messageParser(errorAssignmentCollection)
+                                sendMail(user.dataValues.mail, "Submit Assigment Completed", message)
+                            }
+                        })
+        
+                        if (result.length == 1) {
+                            if (errorAssignmentCollection.length === 0) {
+                                AssignmentModel.findOne({
+                                    where: {
+                                        image_url: assignmentCollectionUrl[0]
+                                    },
+                                    order: [['createdAt', 'DESC']],
+                                }).then(assignment => {
+                                    console.log(assignment)
+                                    if (assignment) {
+                                        var objectAnswer = JSON.parse(assignment.dataValues.answer);
+                                        assignment.dataValues.answer = objectAnswer
+                                        assignment.dataValues = convertCase(assignment.dataValues)
+        
+        
+                                        var endTime = performance.now();
+                                        console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
+                                        return apiResponse.successResponseWithData(res, "Grade test successfully!", assignment)
+                                    } else {
+                                        var endTime = performance.now();
+                                        console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
+                                        return apiResponse.badRequestResponse(res, "Something wrong occurs")
+                                    }
+                                })
+                            } else {
+                                switch (errorAssignmentCollection[0].error) {
+                                    case "TestCodeNull":
+                                        return apiResponse.conflictResponse(res, "Test code not found")
+                                    case "TestCodeWrong":
+                                        return apiResponse.conflictResponse(res, "Wrong test code")
+                                    case "StudentIdNull":
+                                        return apiResponse.conflictResponse(res, "Student id not found")
+                                    case "StudentIdWrong":
+                                        return apiResponse.conflictResponse(res, "Student id wrong")
+                                    default:
+                                        return apiResponse.conflictResponse(res, "Something wrong occurs")
+                                }
+                            }
+        
+                        } else {
+        
+                            var endTime = performance.now();
+                            console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
+                            return apiResponse.successResponse(res, "Grade test successfully!")
+                        }
                     }
-                    
-                } else {
-
-                    var endTime = performance.now();
-                    console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
-                    return apiResponse.successResponse(res, "Grade test successfully!")
                 }
-
             } catch (err) {
                 return apiResponse.ErrorResponse(res, err)
             }
@@ -832,11 +836,11 @@ exports.exportTest = [auth, async function (req, res) {
                 if (data.length > 0) {
                     let count = 0
 
-                    if(startDate && endDate) {
+                    if (startDate && endDate) {
                         var upperFilterTime = moment(endDate, "DD/MM/YYYY").format("LL")
                         var lowerFilterTime = moment(startDate, "DD/MM/YYYY").format("LL")
                     }
-                    
+
                     for (var i = 0; i < data.length; i++) {
                         let assignment = await AssignmentModel.findAll({
                             where: {
@@ -844,13 +848,12 @@ exports.exportTest = [auth, async function (req, res) {
                             }
                         })
                         assignment = assignment.filter(function (t) {
-                            return t.grade*10 >= startGrade && t.grade*10 <= endGrade
+                            return t.grade * 10 >= startGrade && t.grade * 10 <= endGrade
                         })
-                        if(upperFilterTime && lowerFilterTime)
-                        {
+                        if (upperFilterTime && lowerFilterTime) {
                             assignment = assignment.filter(function (t) {
                                 var lookupDate = moment(t.dataValues.createdAt, "DD/MM/YYYY").format("LL")
-                                    return (lookupDate <= upperFilterTime && lookupDate >= lowerFilterTime)
+                                return (lookupDate <= upperFilterTime && lookupDate >= lowerFilterTime)
                             })
                         }
                         for (var j = 0; j < assignment.length; j++) {
