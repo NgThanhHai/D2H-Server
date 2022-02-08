@@ -1,40 +1,42 @@
-exports.successResponse = (res, msg) =>{
-    var data = {
-        success : true,
-        message: msg
-    };
+exports.successResponse = (res, msg) => {
+	var data = {
+		success: true,
+		message: msg
+	};
 
-    res.status(200).json(data)
+	res.status(200).json(data)
 };
 
-exports.successResponseWithData = (res, msg, data) =>{
-    var resData = {
-        success : true,
-        message: msg,
-        data: data
-    };
+exports.successResponseWithData = (res, msg, data) => {
+	var resData = {
+		success: true,
+		message: msg,
+		data: data
+	};
 
-    res.status(200).json(resData)
+	res.status(200).json(resData)
 };
-exports.successResponseWithFile = (res, msg, data) =>{
-    var resData = {
-        success : true,
-        message: msg
-    };
+exports.successResponseWithFile = (res, msg, data) => {
+	var resData = {
+		success: true,
+		message: msg
+	};
 
-    res.status(200).json(resData)
+	res.status(200).json(resData)
 };
 
-exports.successResponseWithPagingData = (res, msg, data, page, totalItems) =>{
-    var resData = {
-        success : true,
-        message: msg,
-        data: data,
-		currentPage: page,
-		totalItems: totalItems
-    };
+exports.successResponseWithPagingData = (res, msg, data, page, totalItems) => {
 
-    res.status(200).json(resData)
+	var resData = {
+		success: true,
+		message: msg,
+		data: {
+			items: data,
+			current_page: page,
+			total_items: totalItems
+		}
+	};
+	res.status(200).json(resData)
 };
 
 exports.ErrorResponse = function (res, msg) {
@@ -70,7 +72,7 @@ exports.unauthorizedResponse = function (res, msg) {
 	return res.status(401).json(data);
 };
 
-exports.forbiddenResponse = function (res){
+exports.forbiddenResponse = function (res) {
 	var data = {
 		success: false,
 		message: "You don't have permisstion to access",
@@ -78,7 +80,7 @@ exports.forbiddenResponse = function (res){
 	return res.status(403).json(data)
 }
 
-exports.badRequestResponse = function(res, msg){
+exports.badRequestResponse = function (res, msg) {
 	var data = {
 		success: false,
 		message: msg,
@@ -86,7 +88,7 @@ exports.badRequestResponse = function(res, msg){
 	return res.status(400).json(data)
 };
 
-exports.conflictResponse = function(res, msg){
+exports.conflictResponse = function (res, msg) {
 	var data = {
 		success: false,
 		message: msg
