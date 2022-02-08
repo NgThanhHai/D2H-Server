@@ -122,7 +122,7 @@ exports.createTest = [auth, function (req, res) {
                                     test.dataValues.results = result
                                     return apiResponse.successResponseWithData(res, "Submit answer successfully", test);
                                 } catch (err) {
-                                    console.log(err)
+                                    return apiResponse.ErrorResponse(res, err)
                                 }
                             }
                             case "csv": {
