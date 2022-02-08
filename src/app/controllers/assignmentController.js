@@ -61,7 +61,7 @@ exports.getAllAssignment = [auth, function (req, res) {
                                 assignments.rows.forEach(assignment => {
                                     var objectAnswer = JSON.parse(assignment.dataValues.answer);
                                     assignment.dataValues.answer = objectAnswer
-                                    assignments.dataValues = convertCase(assignments.dataValues)
+                                    assignment.dataValues = convertCase(assignment.dataValues)
                                 })
                                 return apiResponse.successResponseWithPagingData(res, "success", assignments.rows, getPagingData(page), assignments.count)
                             })
