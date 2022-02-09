@@ -31,6 +31,9 @@ exports.getAllAssignment = [auth, function (req, res) {
                 return apiResponse.badRequestResponse(res, "Course do not exist or you do not have permission to access")
             } else {
                 TestModel.findOne({
+                    where: {
+                        test_id : testId
+                    },
                     include: [{
                         model: CourseUserModel, as: "course_user",
                         required: true,
@@ -45,7 +48,7 @@ exports.getAllAssignment = [auth, function (req, res) {
                     } else {
                         TestCodeModel.findOne({
                             where: {
-                                testTestId: testId,
+                                testTestId: test.test_id,
                                 test_code: testCode
                             }
                         }).then(testcode => {
