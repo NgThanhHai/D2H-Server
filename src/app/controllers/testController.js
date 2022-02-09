@@ -31,6 +31,11 @@ exports.createTest = [auth, function (req, res) {
     var userId = req.user.user_id;
     var courseId = req.params.courseId;
     var answerCollectionUrl = req.body.url
+    if(!courseId || courseId === "")
+    {
+        return apiResponse.badRequestResponse(res, "Course id is required")
+    }
+    
     if (!req.body) {
         return apiResponse.badRequestResponse(res, "Lack of required data")
     } else {
@@ -266,7 +271,10 @@ exports.getAllTest = [auth, function (req, res) {
 
     var startDate = req.query.start_date ? req.query.start_date : null
     var endDate = req.query.end_date ? req.query.end_date : null
-
+    if(!courseId || courseId === "")
+    {
+        return apiResponse.badRequestResponse(res, "Course id is required")
+    }
     try {
         CourseUserModel.findOne({
             where: {
@@ -353,7 +361,10 @@ exports.getAllTest = [auth, function (req, res) {
 exports.getTest = [auth, function (req, res) {
     var userId = req.user.user_id;
     var testId = req.params.testId;
-
+    if(!testId || testId === "")
+    {
+        return apiResponse.badRequestResponse(res, "Test id is required")
+    }
     try {
         TestModel.findOne({
             include: [{
@@ -405,7 +416,10 @@ exports.getTest = [auth, function (req, res) {
 exports.getTestStatistics = [auth, function (req, res) {
     var userId = req.user.user_id;
     var testId = req.params.testId;
-
+    if(!testId || testId === "")
+    {
+        return apiResponse.badRequestResponse(res, "Test id is required")
+    }
     try {
         TestModel.findOne({
             include: [{
@@ -495,7 +509,10 @@ exports.getTestStatistics = [auth, function (req, res) {
 exports.deleteTest = [auth, function (req, res) {
     var userId = req.user.user_id;
     var testId = req.params.testId;
-
+    if(!testId || testId === "")
+    {
+        return apiResponse.badRequestResponse(res, "Test id is required")
+    }
     try {
         TestModel.findOne({
             include: [{
@@ -551,7 +568,10 @@ exports.deleteTest = [auth, function (req, res) {
 exports.updateTest = [auth, function (req, res) {
     var userId = req.user.user_id;
     var testId = req.params.testId;
-
+    if(!testId || testId === "")
+    {
+        return apiResponse.badRequestResponse(res, "Test id is required")
+    }
     try {
         TestModel.findOne({
             include: [{
@@ -621,7 +641,14 @@ exports.submitAssignment = [auth, function (req, res) {
     var userId = req.user.user_id
     var testId = req.body.test_id;
     var assignmentCollectionUrl = req.body.url
-
+    if(!testId || testId === "")
+    {
+        return apiResponse.badRequestResponse(res, "Test id is required")
+    }
+    if(!assignmentCollectionUrl || assignmentCollectionUrl.length === 0)
+    {
+        return apiResponse.badRequestResponse(res, "Assignment URL is required")
+    }
     var startTime = performance.now();
     try {
         TestModel.findOne({
@@ -807,6 +834,10 @@ exports.exportTest = [auth, async function (req, res) {
     var startGrade = req.body.start_grade ? req.body.start_grade : 0
     var endGrade = req.body.end_grade ? req.body.end_grade : 10
     // var userId = req.user.user_id
+    if(!testIdCollection || testIdCollection.length === 0)
+    {
+        return apiResponse.badRequestResponse(res, "Test id is required")
+    }
     try {
         const workbook = new excel.Workbook();
         if (testIdCollection.length > 0) {

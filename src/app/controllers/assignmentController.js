@@ -20,6 +20,18 @@ exports.getAllAssignment = [auth, function (req, res) {
     var page = req.query.page
 
     const { limit, offset } = getPagination(page, size);
+    if(!testId || testId === "")
+    {
+        return apiResponse.badRequestResponse(res, "Test id is required")
+    }
+    if(!courseId || courseId === "")
+    {
+        return apiResponse.badRequestResponse(res, "Course id is required")
+    }
+    if(!testCode || testCode === "")
+    {
+        return apiResponse.badRequestResponse(res, "Test code is required")
+    }
     try {
         CourseUserModel.findOne({
             where: {
