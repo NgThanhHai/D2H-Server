@@ -64,7 +64,7 @@ exports.getAllAssignment = [auth, function (req, res) {
                             if(!testCode || testCode === "")
                             {}else {
                                 testcodes = testcodes.filter(function (t) {
-                                    return t.test_code === testCode
+                                    return t.test_code.toString() === testCode.toString()
                                 })
                             }
                             var assignmentsCollection = []
