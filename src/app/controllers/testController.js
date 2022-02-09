@@ -234,10 +234,10 @@ exports.submitTestAnswer = [auth, function (req, res) {
                                 }
                             }
                             case "csv": {
-                                const file = fs.createWriteStream("file.jpg");
-                                const request = http.get("https://res.cloudinary.com/dik3xxedu/image/upload/v1644311803/p7ynvawbc37eh3jvcckw.png", function (response) {
-                                    response.pipe(file);
-                                });
+                                // const request = https.get("https://res.cloudinary.com/dik3xxedu/image/upload/v1644311803/p7ynvawbc37eh3jvcckw.png", function (response) {
+                                //     const workbook = new excel.Workbook();
+                                //     await workbook.xlsx.read(response);
+                                // });
                             }
                             default: {
                                 return apiResponse.conflictResponse(res, "Something wrong happened");
@@ -770,13 +770,20 @@ exports.submitAssignment = [auth, function (req, res) {
                                             image_url: assignmentCollectionUrl[0]
                                         },
                                         order: [['createdAt', 'DESC']],
-                                    }).then(assignment => {
-                                        console.log(assignment)
+                                    }).then(async assignment => {
                                         if (assignment) {
                                             var objectAnswer = JSON.parse(assignment.dataValues.answer);
                                             assignment.dataValues.answer = objectAnswer
                                             assignment.dataValues = convertCase(assignment.dataValues)
-            
+                                            var testcode = await TestCodeModel.findOne({
+                                                where: {
+                                                    test_code_id : assignment.dataValues.testCodeTestCodeId
+                                                }
+                                            })
+                                            assignment.dataValues.test_code = testcode.dataValues.test_code
+                                            delete assignment.dataValues.testCodeTestCodeId
+                                            assignment.dataValues.student_id = assignment.dataValues.studentStudentId
+                                            delete assignment.dataValues.studentStudentId
             
                                             var endTime = performance.now();
                                             console.log(`Call to diff function took ${endTime - startTime} milliseconds`);

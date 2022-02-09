@@ -14,8 +14,8 @@ const convertCase = require('../../utils/convertCase');
 exports.getAllAssignment = [auth, function (req, res) {
     let testId = req.body.test_id
     let courseId = req.body.course_id
-    let userId = req.user.user_id
     let testCode = req.body.test_code
+    let userId = req.user.user_id
     var size = req.query.size
     var page = req.query.page
 
@@ -27,10 +27,6 @@ exports.getAllAssignment = [auth, function (req, res) {
     if(!courseId || courseId === "")
     {
         return apiResponse.badRequestResponse(res, "Course id is required")
-    }
-    if(!testCode || testCode === "")
-    {
-        return apiResponse.badRequestResponse(res, "Test code is required")
     }
     try {
         CourseUserModel.findOne({
@@ -54,38 +50,51 @@ exports.getAllAssignment = [auth, function (req, res) {
                             course_id: courseId
                         }
                     }]
-                }).then(test => {
+                }).then( async test => {
                     if (!test) {
                         return apiResponse.conflictResponse(res, "Test do not exist");
                     } else {
-                        TestCodeModel.findOne({
+
+                        let testcodes = await TestCodeModel.findAll({
                             where: {
-                                testTestId: test.test_id,
-                                test_code: testCode
+                                testTestId: test.test_id
                             }
-                        }).then(testcode => {
-                            if (testcode) {
-    
-                                AssignmentModel.findAndCountAll({
+                        })
+                        if (testcodes.length !== 0) {
+                            if(!testCode || testCode === "")
+                            {}else {
+                                testcodes = testcodes.filter(function (t) {
+                                    return t.test_code === testCode
+                                })
+                            }
+                            var assignmentsCollection = []
+                            for(var index = 0; index < testcodes.length; index++) {
+                                let assignments = await AssignmentModel.findAndCountAll({
                                     limit: limit,
                                     offset: offset,
                                     where : {
-                                        testCodeTestCodeId: testcode.test_code_id
+                                        testCodeTestCodeId: testcodes[index].test_code_id
                                     }
-                                }).then(assignments => {
-                                    assignments.rows.forEach(assignment => {
-                                        var objectAnswer = JSON.parse(assignment.dataValues.answer);
-                                        assignment.dataValues.answer = objectAnswer
-                                        assignment.dataValues = convertCase(assignment.dataValues)
-                                    })
-                                    return apiResponse.successResponseWithPagingData(res, "success", assignments.rows, getPagingData(page), assignments.count)
                                 })
-    
-    
-                            } else {
-                                return apiResponse.badRequestResponse(res, "Test do not have test code")
+                                for(var indexAssignment = 0; indexAssignment <  assignments.rows.length; indexAssignment++)
+                                {
+                                    let assignment = assignments.rows[indexAssignment]
+                                    var objectAnswer = JSON.parse(assignment.dataValues.answer);
+                                    assignment.dataValues.answer = objectAnswer
+                                    assignment.dataValues = convertCase(assignment.dataValues)
+                                    assignment.dataValues.test_code = testcodes[index].test_code
+                                    delete assignment.dataValues.testCodeTestCodeId
+                                    assignment.dataValues.student_id = assignment.dataValues.studentStudentId
+                                    delete assignment.dataValues.studentStudentId
+                                    assignmentsCollection.push(assignment)
+                                }
                             }
-                        })
+                            
+                            return apiResponse.successResponseWithPagingData(res, "success", assignmentsCollection , getPagingData(page), assignmentsCollection.length)
+
+                        } else {
+                            return apiResponse.badRequestResponse(res, "Test do not have test code")
+                        }
                     }
                 })
             }
