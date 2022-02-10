@@ -7,8 +7,8 @@ const StudentModel = db.Student;
 const StatisticModel = db.Statistic;
 const TestModel = db.Test;
 const UserModel = db.User;
-const https = require('https'); // or 'https' for https:// URLs
-const fs = require('fs');
+var concat = require('concat-stream')
+var request = require('request').defaults({ encoding: null });;
 var excel = require('exceljs');
 const imageProcessing = require('./../services/imageProcessingService')
 const { countMatchPercentage, diff } = require('./../services/matchingServices')
@@ -19,23 +19,27 @@ const getPagingData = require('./../helpers/pagingData')
 const getPagination = require('./../helpers/pagination')
 const Sequelize = require('sequelize');
 const Op = Sequelize.Op;
+const axios = require('axios');
+const Buffer = require('buffer');
 const moment = require('moment');
 const fileUploader = require('./../../configs/cloudinary.config');
 const convertCase = require('../../utils/convertCase');
 const checkMultipleChoice = require('../../utils/checkMultipleChoice');
 const detectError = require('./../services/detectErrorAssignmentService')
 const { performance } = require('perf_hooks');
-const { sendMail, messageParser } = require('./../services/mailService')
+const { sendMail, messageParser } = require('./../services/mailService');
+const cloneDeep = require('../../utils/cloneDeep')
+const { copyFileSync } = require('fs');
+const { resolve } = require('path');
 
 exports.createTest = [auth, function (req, res) {
     var userId = req.user.user_id;
     var courseId = req.params.courseId;
     var answerCollectionUrl = req.body.url
-    if(!courseId || courseId === "")
-    {
+    if (!courseId || courseId === "") {
         return apiResponse.badRequestResponse(res, "Course id is required")
     }
-    
+
     if (!req.body) {
         return apiResponse.badRequestResponse(res, "Lack of required data")
     } else {
@@ -85,7 +89,7 @@ exports.createTest = [auth, function (req, res) {
                                     test.dataValues.results[index].dataValues.test_answer = JSON.parse(test.dataValues.results[index].dataValues.test_answer)
                                     test.dataValues.results[index].dataValues = convertCase(test.dataValues.results[index].dataValues)
                                 }
-                                return apiResponse.successResponseWithData(res, "Submit answer successfully", test);
+                                return apiResponse.successResponseWithData(res, "Create test successfully", test);
                             }
                             case "image": {
                                 const imageProcessTask = []
@@ -128,13 +132,102 @@ exports.createTest = [auth, function (req, res) {
                                     test.dataValues.results = result
                                     test.dataValues.config.is_multiple_choice = isMC
                                     test.dataValues.config.total_number_of_question = numberOfQuestion
-                                    return apiResponse.successResponseWithData(res, "Submit answer successfully", test);
+                                    return apiResponse.successResponseWithData(res, "Create test successfully", test);
                                 } catch (err) {
                                     return apiResponse.ErrorResponse(res, err)
                                 }
                             }
                             case "csv": {
-                                
+                                try {
+                                    const workbook = new excel.Workbook();
+                                    var isMC = false
+                                    var numberOfQuestion = 0
+                                    var returnTestCode = []
+                                    var getExcel = function (req) {
+                                        var dummy = req
+                                        return new Promise((resolve, reject) => {
+                                            request.get({ url: answerCollectionUrl[0] }, async function (err, buff) {
+
+                                                await workbook.xlsx.load(buff.body)
+                                                var worksheet = workbook.worksheets[0]
+                                                for (var j = 0; j < worksheet.rowCount; j++) {
+                                                    var row = worksheet.getRow(j + 1)
+                                                    var rowNumber = j + 1
+                                                    if (rowNumber > 1) {
+                                                        var test_anwser = {}
+                                                        for (var index = 4; index < row.getCell(2).value + 4; index++) {
+                                                            var temp = []
+                                                            if((row.getCell(index).value).length > 1)
+                                                            {
+                                                                for(var letter = 0; letter < (row.getCell(index).value).length; letter++)
+                                                                {
+                                                                    if((row.getCell(index).value)[letter] == "A" || (row.getCell(index).value)[letter] == "B"
+                                                                    || (row.getCell(index).value)[letter] == "C" || (row.getCell(index).value)[letter] == "D"
+                                                                    || (row.getCell(index).value)[letter] == "a" || (row.getCell(index).value)[letter] == "b"
+                                                                    || (row.getCell(index).value)[letter] == "c" || (row.getCell(index).value)[letter] == "d")
+                                                                    {
+                                                                        temp.push((row.getCell(index).value)[letter])
+                                                                    }
+                                                                }
+                                                            }else {
+                                                                temp.push(row.getCell(index).value)
+                                                            }
+                                                            test_anwser[(index - 3).toString()] = temp
+                                                        }
+
+                                                        var testDetail = {
+                                                            test_code: row.getCell(1).value,
+                                                            test_answer: JSON.stringify(test_anwser),
+                                                            image_url:   answerCollectionUrl[0],
+                                                            testTestId: test.test_id
+                                                        }
+
+                                                        let testcode = await TestCodeModel.create(testDetail)
+                                                        testcode.dataValues = convertCase(testcode.dataValues)
+                                                        returnTestCode.push(testcode)
+                                                        isMC = row.getCell(3).value
+                                                        numberOfQuestion = row.getCell(2).value
+                                                    }
+                                                }
+                                                var TestConfig = {
+                                                    is_multiple_choice: isMC,
+                                                    total_number_of_question: numberOfQuestion
+                                                }
+                                                TestConfigModel.update(TestConfig, {
+                                                    where: {
+                                                        testTestId: dummy.test_id
+                                                    }
+                                                })
+                                                dummy.results = JSON.parse(JSON.stringify(returnTestCode))
+                                                dummy.config.is_multiple_choice = isMC
+                                                dummy.config.total_number_of_question = numberOfQuestion
+
+                                                resolve(dummy)
+                                            })
+                                        })
+                                    }
+
+                                    async function callApi(dummy) {
+                                        try {
+                                            const result = await getExcel(dummy);
+                                            return result
+                                    
+                                        } catch (error) {
+                                            console.error('ERROR:');
+                                            console.error(error);
+                                        }
+                                    }
+                                    
+                                    let dummy = JSON.parse(JSON.stringify(test))
+                                    var result = await callApi(dummy)
+                                    result.results.forEach(testcode => {
+                                        testcode.test_answer = JSON.parse(testcode.test_answer)
+                                    })
+                                    return apiResponse.successResponseWithData(res, "Create test successfully", result);
+                                } catch (err) {
+                                    return apiResponse.ErrorResponse(res, err)
+                                }
+
                             }
                             default: {
                                 return apiResponse.conflictResponse(res, "Something wrong happened");
@@ -175,6 +268,7 @@ exports.submitTestAnswer = [auth, function (req, res) {
                     }]
                 }).then(async test => {
                     if (test) {
+
                         switch (test.dataValues.test_config.dataValues.test_answer_type) {
                             case "object": {
                                 req.body.results.forEach(testDetails => {
@@ -234,10 +328,24 @@ exports.submitTestAnswer = [auth, function (req, res) {
                                 }
                             }
                             case "csv": {
-                                // const request = https.get("https://res.cloudinary.com/dik3xxedu/image/upload/v1644311803/p7ynvawbc37eh3jvcckw.png", function (response) {
-                                //     const workbook = new excel.Workbook();
-                                //     await workbook.xlsx.read(response);
-                                // });
+                                var file = request("https://res.cloudinary.com/haiii/raw/upload/v1644415093/excel/config_ieyspl.xlsx")
+                                const workbook = new excel.Workbook();
+                                file.pipe(concat({ encoding: 'buffer' }, async function (buf) {
+                                    await workbook.xlsx.load(buf)
+
+                                    var worksheet = worksheet.worksheets[0]
+                                    worksheet.eachRow(function (row, rowNumber) {
+                                        console.log('Row ' + rowNumber + ' = ' + JSON.stringify(row.values));
+                                        // var testDetail = {
+                                        //     test_code: testDetails.test_code,
+                                        //     test_answer: JSON.stringify(testDetails.answer),
+                                        //     image_url: "",
+                                        //     testTestId: test.test_id
+                                        // }
+
+                                        // TestCodeModel.create(testDetail)
+                                    });
+                                }))
                             }
                             default: {
                                 return apiResponse.conflictResponse(res, "Something wrong happened");
@@ -271,8 +379,7 @@ exports.getAllTest = [auth, function (req, res) {
 
     var startDate = req.query.start_date ? req.query.start_date : null
     var endDate = req.query.end_date ? req.query.end_date : null
-    if(!courseId || courseId === "")
-    {
+    if (!courseId || courseId === "") {
         return apiResponse.badRequestResponse(res, "Course id is required")
     }
     try {
@@ -361,8 +468,7 @@ exports.getAllTest = [auth, function (req, res) {
 exports.getTest = [auth, function (req, res) {
     var userId = req.user.user_id;
     var testId = req.params.testId;
-    if(!testId || testId === "")
-    {
+    if (!testId || testId === "") {
         return apiResponse.badRequestResponse(res, "Test id is required")
     }
     try {
@@ -416,8 +522,7 @@ exports.getTest = [auth, function (req, res) {
 exports.getTestStatistics = [auth, function (req, res) {
     var userId = req.user.user_id;
     var testId = req.params.testId;
-    if(!testId || testId === "")
-    {
+    if (!testId || testId === "") {
         return apiResponse.badRequestResponse(res, "Test id is required")
     }
     try {
@@ -509,8 +614,7 @@ exports.getTestStatistics = [auth, function (req, res) {
 exports.deleteTest = [auth, function (req, res) {
     var userId = req.user.user_id;
     var testId = req.params.testId;
-    if(!testId || testId === "")
-    {
+    if (!testId || testId === "") {
         return apiResponse.badRequestResponse(res, "Test id is required")
     }
     try {
@@ -568,8 +672,7 @@ exports.deleteTest = [auth, function (req, res) {
 exports.updateTest = [auth, function (req, res) {
     var userId = req.user.user_id;
     var testId = req.params.testId;
-    if(!testId || testId === "")
-    {
+    if (!testId || testId === "") {
         return apiResponse.badRequestResponse(res, "Test id is required")
     }
     try {
@@ -641,12 +744,10 @@ exports.submitAssignment = [auth, function (req, res) {
     var userId = req.user.user_id
     var testId = req.body.test_id;
     var assignmentCollectionUrl = req.body.url
-    if(!testId || testId === "")
-    {
+    if (!testId || testId === "") {
         return apiResponse.badRequestResponse(res, "Test id is required")
     }
-    if(!assignmentCollectionUrl || assignmentCollectionUrl.length === 0)
-    {
+    if (!assignmentCollectionUrl || assignmentCollectionUrl.length === 0) {
         return apiResponse.badRequestResponse(res, "Assignment URL is required")
     }
     var startTime = performance.now();
@@ -664,16 +765,16 @@ exports.submitAssignment = [auth, function (req, res) {
             }]
         }).then(async test => {
             if (test) {
-    
+
                 const imageProcessTask = []
                 assignmentCollectionUrl.forEach(assignment => {
                     imageProcessTask.push(imageProcessing(test.test_id, test.test_config.paper_type, assignment))
                 })
                 let result = await Promise.all(imageProcessTask)
                 try {
-    
+
                     var errorAssignmentCollection = []
-                    for(var index = 0; index < result.length; index++) {
+                    for (var index = 0; index < result.length; index++) {
                         let resolve = result[index]
                         if (detectError(resolve) != "") {
                             var errorAssignment = resolve
@@ -685,7 +786,7 @@ exports.submitAssignment = [auth, function (req, res) {
                                 status: "new",
                                 answer: JSON.stringify(resolve.result.answer)
                             }
-    
+
                             AssignmentModel.create(assigntmentBody).then(assignment => {
                                 TestCodeModel.findOne({
                                     where: {
@@ -694,10 +795,10 @@ exports.submitAssignment = [auth, function (req, res) {
                                     }
                                 }).then(testcode => {
                                     if (testcode) {
-    
+
                                         var result = diff(JSON.parse(assignment.answer), JSON.parse(testcode.test_answer))
                                         var grade = countMatchPercentage(result)
-    
+
                                         AssignmentModel.update({
                                             testCodeTestCodeId: testcode.test_code_id,
                                             grade: grade,
@@ -709,7 +810,7 @@ exports.submitAssignment = [auth, function (req, res) {
                                         })
                                     }
                                 })
-    
+
                                 StudentModel.findOne({
                                     where: {
                                         student_id: resolve.result.student_id
@@ -735,13 +836,12 @@ exports.submitAssignment = [auth, function (req, res) {
                                             }
                                         })
                                     }
-    
+
                                 })
                             })
                         }
-    
-                        if(+index === result.length - 1)
-                        {
+
+                        if (+index === result.length - 1) {
                             TestModel.update({
                                 status: 'graded',
                                 graded_date: new Date()
@@ -750,7 +850,7 @@ exports.submitAssignment = [auth, function (req, res) {
                                     test_id: test.test_id
                                 }
                             })
-            
+
                             UserModel.findOne({
                                 where: {
                                     user_id: userId
@@ -762,7 +862,7 @@ exports.submitAssignment = [auth, function (req, res) {
                                     sendMail(user.dataValues.mail, "Submit Assigment Completed", message)
                                 }
                             })
-            
+
                             if (result.length == 1) {
                                 if (errorAssignmentCollection.length === 0) {
                                     AssignmentModel.findOne({
@@ -777,14 +877,14 @@ exports.submitAssignment = [auth, function (req, res) {
                                             assignment.dataValues = convertCase(assignment.dataValues)
                                             var testcode = await TestCodeModel.findOne({
                                                 where: {
-                                                    test_code_id : assignment.dataValues.testCodeTestCodeId
+                                                    test_code_id: assignment.dataValues.testCodeTestCodeId
                                                 }
                                             })
                                             assignment.dataValues.test_code = testcode.dataValues.test_code
                                             delete assignment.dataValues.testCodeTestCodeId
                                             assignment.dataValues.student_id = assignment.dataValues.studentStudentId
                                             delete assignment.dataValues.studentStudentId
-            
+
                                             var endTime = performance.now();
                                             console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
                                             return apiResponse.successResponseWithData(res, "Grade test successfully!", assignment)
@@ -808,9 +908,9 @@ exports.submitAssignment = [auth, function (req, res) {
                                             return apiResponse.conflictResponse(res, "Something wrong occurs")
                                     }
                                 }
-            
+
                             } else {
-            
+
                                 var endTime = performance.now();
                                 console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
                                 return apiResponse.successResponse(res, "Grade test successfully!")
@@ -823,13 +923,13 @@ exports.submitAssignment = [auth, function (req, res) {
             } else {
                 return apiResponse.badRequestResponse(res, "Test not exist!")
             }
-    
+
         })
-    
-    } catch(ex) {
+
+    } catch (ex) {
         return apiResponse.ErrorResponse(res, ex)
     }
-    
+
 }]
 
 
@@ -841,8 +941,7 @@ exports.exportTest = [auth, async function (req, res) {
     var startGrade = req.body.start_grade ? req.body.start_grade : 0
     var endGrade = req.body.end_grade ? req.body.end_grade : 10
     // var userId = req.user.user_id
-    if(!testIdCollection || testIdCollection.length === 0)
-    {
+    if (!testIdCollection || testIdCollection.length === 0) {
         return apiResponse.badRequestResponse(res, "Test id is required")
     }
     try {
@@ -857,7 +956,7 @@ exports.exportTest = [auth, async function (req, res) {
                 if (!test) {
                     continue;
                 } else {
-    
+
                     const worksheet = workbook.addWorksheet(test.dataValues.test_name + " " + testIndex);
                     worksheet.columns = [
                         { header: 'Number', key: 'no' },
@@ -869,22 +968,22 @@ exports.exportTest = [auth, async function (req, res) {
                         { header: 'Student Answer', key: 'student_answer' },
                         { header: 'Grade', key: 'grade' }
                     ];
-    
+
                     let data = await TestCodeModel.findAll({
                         where: {
                             testTestId: test.dataValues.test_id
                         },
-    
+
                     })
                     let rows = []
                     if (data.length > 0) {
                         let count = 0
-    
+
                         if (startDate && endDate) {
                             var upperFilterTime = moment(endDate, "DD/MM/YYYY").format("LL")
                             var lowerFilterTime = moment(startDate, "DD/MM/YYYY").format("LL")
                         }
-    
+
                         for (var i = 0; i < data.length; i++) {
                             let assignment = await AssignmentModel.findAll({
                                 where: {
@@ -915,23 +1014,23 @@ exports.exportTest = [auth, async function (req, res) {
                                 rows.push(row)
                             }
                         }
-    
+
                     } else {
                         continue;
                     }
-    
+
                     rows.forEach(row => {
                         worksheet.addRow(row);
                     })
                     worksheet.getRow(1).eachCell((cell) => {
                         cell.font = { bold: true };
                     });
-    
+
                 }
-    
+
             }
             var fileName = 'export_test_grade.xlsx';
-    
+
             res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
             res.setHeader("Content-Disposition", "attachment; filename=" + fileName);
             workbook.xlsx.write(res).then(function () {
@@ -940,7 +1039,7 @@ exports.exportTest = [auth, async function (req, res) {
         } else {
             return apiResponse.badRequestResponse(res, "No test to export")
         }
-    }catch(ex) {
+    } catch (ex) {
         return apiResponse.ErrorResponse(res, ex)
     }
 }]

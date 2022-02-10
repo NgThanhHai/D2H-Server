@@ -18,7 +18,9 @@
     "body-parse": "^0.1.0",
     "body-parser": "^1.19.0",
     "buffer": "^6.0.3",
+    "Buffer": "^0.0.0",
     "cloudinary": "^1.27.1",
+    "concat-stream": "^2.0.0",
     "cookie-parser": "~1.4.4",
     "cors": "^2.8.5",
     "debug": "~2.6.9",
@@ -43,6 +45,7 @@
     "nodemailer": "^6.7.2",
     "npm": "^8.3.0",
     "perf_hooks": "^0.0.1",
+    "request": "^2.88.2",
     "sequelize": "^6.14.1",
     "stream-buffers": "^3.0.2"
   },

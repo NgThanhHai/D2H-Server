@@ -13,10 +13,10 @@ const memorize = (func) => {
 const countMatchPercentage = (obj) => {
     var numberOfKey = Object.keys(obj).length;
     var count = 0; 
-    Object.keys(obj).forEach(key => {
+    Object.keys(obj).forEach(key => {               
       if(typeof obj[key] === 'object')
       {
-        if(countMatchPercentage(obj[key]) == 1)
+        if(countMatchPercentage(obj[key]) == 1)   
         {
           count++
         }
@@ -57,5 +57,6 @@ const diff = memorize((obj1, obj2) => {
 
     return result;
 });
+
 
 module.exports = {memorize, countMatchPercentage, diff}
