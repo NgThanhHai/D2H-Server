@@ -30,6 +30,8 @@ exports.getMyInfo = [auth, function (req, res) {
                 delete newUser.phone_number
                 newUser.created_at = user.dataValues.createdAt
                 newUser.updated_at = user.dataValues.updatedAt
+                delete newUser.createdAt
+                delete newUser.updatedAt
                 return apiResponse.successResponseWithData(res, "Success", newUser)
             } else {
                 return apiResponse.ErrorResponse(res, "Id not found")
