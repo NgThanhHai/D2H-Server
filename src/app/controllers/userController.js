@@ -1,19 +1,12 @@
-var Buffer = require('buffer/').Buffer
+
 const db = require('./../models');
 const UserModel = db.User;
-const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 var apiResponse = require('./../helpers/apiResponse');
 const auth = require('./../../middlewares/jwt');
 const cloneDeep = require('../../utils/cloneDeep')
 
-var { access_token_secret, access_token_life, refresh_token_secret, refresh_token_life } = require('./../../configs/auth/index');
 
-function parseJwt(token) {
-    var base64Payload = token.split('.')[1];
-    var payload = Buffer.from(base64Payload, 'base64');
-    return JSON.parse(payload.toString());
-}
 
 exports.getMyInfo = [auth, function (req, res) {
 
