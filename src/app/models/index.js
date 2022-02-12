@@ -25,7 +25,6 @@ const sequelize = new Sequelize(process.env.DB, process.env.USER, process.env.PA
   db.CU = require("./courseuser")(sequelize, Sequelize);
   
   db.TestConfig = require("./testconfig")(sequelize, Sequelize);
-  db.Statistic = require("./statistic")(sequelize, Sequelize);
   
   db.Assignment = require("./assignment")(sequelize, Sequelize);
   db.Student = require("./student")(sequelize, Sequelize);
@@ -51,10 +50,6 @@ const sequelize = new Sequelize(process.env.DB, process.env.USER, process.env.PA
   // relationship between test_config and test
   db.Test.hasOne(db.TestConfig)
   db.TestConfig.belongsTo(db.Test)
-  
-  //relationship between test and statistic
-  db.Test.hasOne(db.Statistic)
-  db.Statistic.belongsTo(db.Test)
   
   // relationship between test and test_code
   db.Test.hasMany(db.TestCode)

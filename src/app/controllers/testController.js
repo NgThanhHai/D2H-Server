@@ -4,7 +4,6 @@ const TestConfigModel = db.TestConfig;
 const TestCodeModel = db.TestCode;
 const AssignmentModel = db.Assignment;
 const StudentModel = db.Student;
-const StatisticModel = db.Statistic;
 const TestModel = db.Test;
 const UserModel = db.User;
 var concat = require('concat-stream')
@@ -12,7 +11,7 @@ var request = require('request').defaults({ encoding: null });;
 var excel = require('exceljs');
 const imageProcessing = require('./../services/imageProcessingService')
 const { countMatchPercentage, diff } = require('./../services/matchingServices')
-const { average_score, median_score, count_under_marked_score, count_archive_marked_score, highest_score_archived } = require('./../services/descriptiveStatisticsService')
+const { average_score, median_score, count_under_marked_score, count_archive_marked_score, highest_score_archived, score_in_range } = require('./../services/descriptiveStatisticsService')
 const auth = require('./../../middlewares/jwt');
 var apiResponse = require('./../helpers/apiResponse');
 const getPagingData = require('./../helpers/pagingData')
@@ -556,12 +555,6 @@ exports.getTestStatistics = [auth, function (req, res) {
                     return apiResponse.conflictResponse(res, "Please grade the test first")
                 } else {
 
-                    StatisticModel.findOne({
-                        where: {
-                            testTestId: tests.test_id
-                        }
-                    }).then(statistic => {
-                        if (!statistic) {
                             TestCodeModel.findAll({
                                 where: {
                                     testTestId: tests.test_id
@@ -574,30 +567,26 @@ exports.getTestStatistics = [auth, function (req, res) {
                                 let scoreCollection = []
                                 testcodes.forEach(testcode => {
                                     testcode.assigments.forEach(assigment => {
-                                        scoreCollection.push(assigment.dataValues.grade)
+                                        scoreCollection.push(assigment.dataValues.grade*10)
                                     })
                                 })
 
                                 var body = {
-                                    average_score: average_score(scoreCollection),
-                                    median_score: median_score(scoreCollection),
-                                    noas_under_ten_percent: count_under_marked_score(scoreCollection, 0.1),
-                                    noas_under_fifthty_percent: count_under_marked_score(scoreCollection, 0.5),
-                                    noas_reach_hundred_percent: count_archive_marked_score(scoreCollection, 1),
-                                    score_achived_by_most_assignment: highest_score_archived(scoreCollection)
+                                    test_id : tests.test_id,
+                                    total_assignments: scoreCollection.length,
+                                    average_score: average_score(scoreCollection) ,
+                                    median_score: median_score(scoreCollection) ,
+                                    noas_under_ten_percent: count_under_marked_score(scoreCollection, 1),
+                                    noas_under_fifthty_percent: count_under_marked_score(scoreCollection, 5),
+                                    noas_reach_hundred_percent: count_archive_marked_score(scoreCollection, 10),
+                                    score_achived_by_most_assignment: highest_score_archived(scoreCollection),
+                                    score_at_good : score_in_range(scoreCollection, 8 , 10),
+                                    score_at_rather: score_in_range(scoreCollection, 6.5 , 7.9),
+                                    score_at_medium: score_in_range(scoreCollection, 5 , 6.4),
+                                    score_at_weak: score_in_range(scoreCollection, 0 , 4.9)
                                 }
-                                StatisticModel.create(body).then(statistic => {
-                                    statistic.dataValues = convertCase(statistic.dataValues)
-                                    return apiResponse.successResponseWithData(res, "Success", statistic)
-                                })
-
-                            })
-                        }
-                        else {
-                            return apiResponse.successResponseWithData(res, "Success", statistic)
-                        }
-                    })
-
+                                return apiResponse.successResponseWithData(res, "Success", body)
+                            })         
                 }
 
             } else {

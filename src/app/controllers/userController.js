@@ -21,7 +21,6 @@ exports.getMyInfo = [auth, function (req, res) {
         }).then(user => {
             if (user) {
                 const newUser = cloneDeep(user.dataValues)
-                console.log(newUser)
 
                 delete newUser.password
                 newUser.email = newUser.mail

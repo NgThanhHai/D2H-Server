@@ -55,4 +55,19 @@ const highest_score_archived = arr => (arr || []).reduce( ( acc, el ) => {
     return acc  
   }, { k:{} }).max
 
-module.exports = {average_score, median_score, count_under_marked_score, count_archive_marked_score, highest_score_archived}
+
+const score_in_range = (scoreCollection, lower, upper) => {
+    let totalItems = scoreCollection.length;
+    let count = 0
+    for(var i = 0; i< totalItems; i++) {
+        if(scoreCollection[i] <= upper && scoreCollection[i] >= lower) 
+        {
+            count++
+        }
+    }
+    
+    return count;
+}
+
+
+module.exports = {average_score, median_score, count_under_marked_score, count_archive_marked_score, highest_score_archived, score_in_range}
