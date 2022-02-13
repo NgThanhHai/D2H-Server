@@ -95,3 +95,12 @@ exports.conflictResponse = function (res, msg) {
 	};
 	return res.status(409).json(data)
 }
+
+exports.conflictResponseWithData = function (res, msg, data) {
+	var resData = {
+		success: false,
+		message: msg,
+		data: data
+	};
+	return res.status(409).json(resData)
+}

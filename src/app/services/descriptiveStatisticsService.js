@@ -60,7 +60,7 @@ const score_in_range = (scoreCollection, lower, upper) => {
     let totalItems = scoreCollection.length;
     let count = 0
     for(var i = 0; i< totalItems; i++) {
-        if(scoreCollection[i] <= upper && scoreCollection[i] >= lower) 
+        if(scoreCollection[i] < upper && scoreCollection[i] >= lower) 
         {
             count++
         }
@@ -68,6 +68,7 @@ const score_in_range = (scoreCollection, lower, upper) => {
     
     return count;
 }
+
 
 
 module.exports = {average_score, median_score, count_under_marked_score, count_archive_marked_score, highest_score_archived, score_in_range}

@@ -156,19 +156,16 @@ exports.createTest = [auth, function (req, res) {
                                                         var test_anwser = {}
                                                         for (var index = 4; index < row.getCell(2).value + 4; index++) {
                                                             var temp = []
-                                                            if((row.getCell(index).value).length > 1)
-                                                            {
-                                                                for(var letter = 0; letter < (row.getCell(index).value).length; letter++)
-                                                                {
-                                                                    if((row.getCell(index).value)[letter] == "A" || (row.getCell(index).value)[letter] == "B"
-                                                                    || (row.getCell(index).value)[letter] == "C" || (row.getCell(index).value)[letter] == "D"
-                                                                    || (row.getCell(index).value)[letter] == "a" || (row.getCell(index).value)[letter] == "b"
-                                                                    || (row.getCell(index).value)[letter] == "c" || (row.getCell(index).value)[letter] == "d")
-                                                                    {
+                                                            if ((row.getCell(index).value).length > 1) {
+                                                                for (var letter = 0; letter < (row.getCell(index).value).length; letter++) {
+                                                                    if ((row.getCell(index).value)[letter] == "A" || (row.getCell(index).value)[letter] == "B"
+                                                                        || (row.getCell(index).value)[letter] == "C" || (row.getCell(index).value)[letter] == "D"
+                                                                        || (row.getCell(index).value)[letter] == "a" || (row.getCell(index).value)[letter] == "b"
+                                                                        || (row.getCell(index).value)[letter] == "c" || (row.getCell(index).value)[letter] == "d") {
                                                                         temp.push((row.getCell(index).value)[letter])
                                                                     }
                                                                 }
-                                                            }else {
+                                                            } else {
                                                                 temp.push(row.getCell(index).value)
                                                             }
                                                             test_anwser[(index - 3).toString()] = temp
@@ -177,7 +174,7 @@ exports.createTest = [auth, function (req, res) {
                                                         var testDetail = {
                                                             test_code: row.getCell(1).value,
                                                             test_answer: JSON.stringify(test_anwser),
-                                                            image_url:   answerCollectionUrl[0],
+                                                            image_url: answerCollectionUrl[0],
                                                             testTestId: test.test_id
                                                         }
 
@@ -210,13 +207,13 @@ exports.createTest = [auth, function (req, res) {
                                         try {
                                             const result = await getExcel(dummy);
                                             return result
-                                    
+
                                         } catch (error) {
                                             console.error('ERROR:');
                                             console.error(error);
                                         }
                                     }
-                                    
+
                                     let dummy = JSON.parse(JSON.stringify(test))
                                     var result = await callApi(dummy)
                                     result.results.forEach(testcode => {
@@ -471,14 +468,21 @@ exports.getTest = [auth, function (req, res) {
         return apiResponse.badRequestResponse(res, "Test id is required")
     }
     try {
+        let courseuser = await CourseUserModel.findAll({
+            where: {
+                user_id: userId
+            }
+        })
+        if (!courseuser) {
+            return apiResponse.badConflictResponse(res, "User not exist")
+        }
+
+        let courseuserCollection = []
+        for (let index = 0; index < courseuser.length; index++) {
+            courseuserCollection.push(courseuser[index].course_user_id)
+        }
+        
         TestModel.findOne({
-            include: [{
-                model: CourseUserModel, as: "course_user",
-                required: true,
-                where: {
-                    user_id: userId
-                }
-            }],
             include: [{
                 model: TestConfigModel, as: "test_config",
                 required: true,
@@ -496,6 +500,9 @@ exports.getTest = [auth, function (req, res) {
                 test_id: testId
             }
         }).then(tests => {
+            if (!courseuserCollection.includes(tests.dataValues.courseUserCourseUserId)) {
+                return apiResponse.conflictResponse(res, "User not have access to this test")
+            }
             if (tests) {
                 delete tests.dataValues.course_user
 
@@ -518,21 +525,28 @@ exports.getTest = [auth, function (req, res) {
     }
 }]
 
-exports.getTestStatistics = [auth, function (req, res) {
+exports.getTestStatistics = [auth, async function (req, res) {
     var userId = req.user.user_id;
     var testId = req.params.testId;
+    var step = req.query.step
     if (!testId || testId === "") {
         return apiResponse.badRequestResponse(res, "Test id is required")
     }
     try {
+        let courseuser = await CourseUserModel.findAll({
+            where: {
+                user_id: userId
+            }
+        })
+        if (!courseuser) {
+            return apiResponse.badConflictResponse(res, "User not exist")
+        }
+
+        let courseuserCollection = []
+        for (let index = 0; index < courseuser.length; index++) {
+            courseuserCollection.push(courseuser[index].course_user_id)
+        }
         TestModel.findOne({
-            include: [{
-                model: CourseUserModel, as: "course_user",
-                required: true,
-                where: {
-                    user_id: userId
-                }
-            }],
             include: [{
                 model: TestConfigModel, as: "test_config",
                 required: true,
@@ -550,43 +564,59 @@ exports.getTestStatistics = [auth, function (req, res) {
                 test_id: testId
             }
         }).then(tests => {
+            if (!courseuserCollection.includes(tests.dataValues.courseUserCourseUserId)) {
+                return apiResponse.conflictResponse(res, "User not have access to this test")
+            }
             if (tests) {
+
                 if (tests.status === "new") {
                     return apiResponse.conflictResponse(res, "Please grade the test first")
                 } else {
 
-                            TestCodeModel.findAll({
-                                where: {
-                                    testTestId: tests.test_id
-                                },
-                                include: [{
-                                    model: AssignmentModel, as: "assigments",
-                                    required: true
-                                }]
-                            }).then(testcodes => {
-                                let scoreCollection = []
-                                testcodes.forEach(testcode => {
-                                    testcode.assigments.forEach(assigment => {
-                                        scoreCollection.push(assigment.dataValues.grade*10)
-                                    })
-                                })
+                    TestCodeModel.findAll({
+                        where: {
+                            testTestId: tests.test_id
+                        },
+                        include: [{
+                            model: AssignmentModel, as: "assigments",
+                            required: true
+                        }]
+                    }).then(testcodes => {
+                        let scoreCollection = []
+                        testcodes.forEach(testcode => {
+                            testcode.assigments.forEach(assigment => {
+                                scoreCollection.push(assigment.dataValues.grade * 10)
+                            })
+                        })
 
-                                var body = {
-                                    test_id : tests.test_id,
-                                    total_assignments: scoreCollection.length,
-                                    average_score: average_score(scoreCollection) ,
-                                    median_score: median_score(scoreCollection) ,
-                                    noas_under_ten_percent: count_under_marked_score(scoreCollection, 1),
-                                    noas_under_fifthty_percent: count_under_marked_score(scoreCollection, 5),
-                                    noas_reach_hundred_percent: count_archive_marked_score(scoreCollection, 10),
-                                    score_achived_by_most_assignment: highest_score_archived(scoreCollection),
-                                    score_at_good : score_in_range(scoreCollection, 8 , 10),
-                                    score_at_rather: score_in_range(scoreCollection, 6.5 , 7.9),
-                                    score_at_medium: score_in_range(scoreCollection, 5 , 6.4),
-                                    score_at_weak: score_in_range(scoreCollection, 0 , 4.9)
-                                }
-                                return apiResponse.successResponseWithData(res, "Success", body)
-                            })         
+                        let sir = {}
+
+                        for (let index = 0; index < 10; index = +index + +step) {
+                            let upper = +index + +step
+                            let lower = +index
+                            let label = +lower + "_" + +upper
+                            sir[label] = score_in_range(scoreCollection, lower, upper)
+                        }
+
+
+
+                        var body = {
+                            test_id: tests.test_id,
+                            total_assignments: scoreCollection.length,
+                            average_score: average_score(scoreCollection),
+                            median_score: median_score(scoreCollection),
+                            noas_under_ten_percent: count_under_marked_score(scoreCollection, 1),
+                            noas_under_fifthty_percent: count_under_marked_score(scoreCollection, 5),
+                            noas_reach_hundred_percent: count_archive_marked_score(scoreCollection, 10),
+                            score_achived_by_most_assignment: highest_score_archived(scoreCollection),
+                            score_at_good: score_in_range(scoreCollection, 8, 11),
+                            score_at_rather: score_in_range(scoreCollection, 6.5, 8),
+                            score_at_medium: score_in_range(scoreCollection, 5, 6.5),
+                            score_at_weak: score_in_range(scoreCollection, 0, 5),
+                            score_in_range: sir
+                        }
+                        return apiResponse.successResponseWithData(res, "Success", body)
+                    })
                 }
 
             } else {
@@ -607,18 +637,27 @@ exports.deleteTest = [auth, function (req, res) {
         return apiResponse.badRequestResponse(res, "Test id is required")
     }
     try {
+        let courseuser = await CourseUserModel.findAll({
+            where: {
+                user_id: userId
+            }
+        })
+        if (!courseuser) {
+            return apiResponse.badConflictResponse(res, "User not exist")
+        }
+
+        let courseuserCollection = []
+        for (let index = 0; index < courseuser.length; index++) {
+            courseuserCollection.push(courseuser[index].course_user_id)
+        }
         TestModel.findOne({
-            include: [{
-                model: CourseUserModel, as: "course_user",
-                required: true,
-                where: {
-                    user_id: userId
-                }
-            }],
             where: {
                 test_id: testId
             }
         }).then(tests => {
+            if (!courseuserCollection.includes(tests.dataValues.courseUserCourseUserId)) {
+                return apiResponse.conflictResponse(res, "User not have access to this test")
+            }
             if (tests) {
                 delete tests.dataValues.course_user
                 AssignmentModel.destroy({
@@ -665,19 +704,29 @@ exports.updateTest = [auth, function (req, res) {
         return apiResponse.badRequestResponse(res, "Test id is required")
     }
     try {
+        let courseuser = await CourseUserModel.findAll({
+            where: {
+                user_id: userId
+            }
+        })
+        if (!courseuser) {
+            return apiResponse.badConflictResponse(res, "User not exist")
+        }
+
+        let courseuserCollection = []
+        for (let index = 0; index < courseuser.length; index++) {
+            courseuserCollection.push(courseuser[index].course_user_id)
+        }
         TestModel.findOne({
-            include: [{
-                model: CourseUserModel, as: "course_user",
-                required: true,
-                where: {
-                    user_id: userId
-                }
-            }],
             where: {
                 test_id: testId
             }
         }).then(tests => {
+            if (!courseuserCollection.includes(tests.dataValues.courseUserCourseUserId)) {
+                return apiResponse.conflictResponse(res, "User not have access to this test")
+            }
             if (tests) {
+                
                 delete tests.dataValues.course_user
                 var TestConfig = {
                     test_answer_type: req.body.result_type,
@@ -741,6 +790,20 @@ exports.submitAssignment = [auth, function (req, res) {
     }
     var startTime = performance.now();
     try {
+        let courseuser = await CourseUserModel.findAll({
+            where: {
+                user_id: userId
+            }
+        })
+        if (!courseuser) {
+            return apiResponse.badConflictResponse(res, "User not exist")
+        }
+
+        let courseuserCollection = []
+        for (let index = 0; index < courseuser.length; index++) {
+            courseuserCollection.push(courseuser[index].course_user_id)
+        }
+        
         TestModel.findOne({
             where: {
                 test_id: testId
@@ -753,8 +816,10 @@ exports.submitAssignment = [auth, function (req, res) {
                 }
             }]
         }).then(async test => {
+            if (!courseuserCollection.includes(test.dataValues.courseUserCourseUserId)) {
+                return apiResponse.conflictResponse(res, "User not have access to this test")
+            }
             if (test) {
-
                 const imageProcessTask = []
                 assignmentCollectionUrl.forEach(assignment => {
                     imageProcessTask.push(imageProcessing(test.test_id, test.test_config.paper_type, assignment))
@@ -784,10 +849,18 @@ exports.submitAssignment = [auth, function (req, res) {
                                     }
                                 }).then(testcode => {
                                     if (testcode) {
+                                        var tempAssignmentAnswer = JSON.parse(assignment.answer)
+                                        var tempTestAnswer = JSON.parse(testcode.test_answer)
 
-                                        var result = diff(JSON.parse(assignment.answer), JSON.parse(testcode.test_answer))
+                                        if (Object.keys(tempAssignmentAnswer).length > Object.keys(tempTestAnswer).length) {
+                                            for (var i = Object.keys(tempAssignmentAnswer).length; i >= Object.keys(tempTestAnswer).length + 1; i--) {
+                                                var property = i + ""
+                                                delete tempAssignmentAnswer[property]
+                                            }
+                                        }
+
+                                        var result = diff(tempAssignmentAnswer, tempTestAnswer)
                                         var grade = countMatchPercentage(result)
-
                                         AssignmentModel.update({
                                             testCodeTestCodeId: testcode.test_code_id,
                                             grade: grade,
@@ -831,6 +904,7 @@ exports.submitAssignment = [auth, function (req, res) {
                         }
 
                         if (+index === result.length - 1) {
+
                             TestModel.update({
                                 status: 'graded',
                                 graded_date: new Date()
@@ -854,13 +928,15 @@ exports.submitAssignment = [auth, function (req, res) {
 
                             if (result.length == 1) {
                                 if (errorAssignmentCollection.length === 0) {
+                                    console.log("url " + resolve.url)
                                     AssignmentModel.findOne({
                                         where: {
-                                            image_url: assignmentCollectionUrl[0]
+                                            image_url: resolve.url
                                         },
                                         order: [['createdAt', 'DESC']],
                                     }).then(async assignment => {
                                         if (assignment) {
+                                            console.log(assignment)
                                             var objectAnswer = JSON.parse(assignment.dataValues.answer);
                                             assignment.dataValues.answer = objectAnswer
                                             assignment.dataValues = convertCase(assignment.dataValues)
@@ -869,14 +945,19 @@ exports.submitAssignment = [auth, function (req, res) {
                                                     test_code_id: assignment.dataValues.testCodeTestCodeId
                                                 }
                                             })
-                                            assignment.dataValues.test_code = testcode.dataValues.test_code
-                                            delete assignment.dataValues.testCodeTestCodeId
-                                            assignment.dataValues.student_id = assignment.dataValues.studentStudentId
-                                            delete assignment.dataValues.studentStudentId
+                                            if (!testcode) {
+                                                return apiResponse.conflictResponse(res, "Can not find test code")
+                                            } else {
 
-                                            var endTime = performance.now();
-                                            console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
-                                            return apiResponse.successResponseWithData(res, "Grade test successfully!", assignment)
+                                                assignment.dataValues.test_code = testcode.dataValues.test_code
+                                                delete assignment.dataValues.testCodeTestCodeId
+                                                assignment.dataValues.student_id = assignment.dataValues.studentStudentId
+                                                delete assignment.dataValues.studentStudentId
+
+                                                var endTime = performance.now();
+                                                console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
+                                                return apiResponse.successResponseWithData(res, "Grade test successfully!", assignment)
+                                            }
                                         } else {
                                             var endTime = performance.now();
                                             console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
@@ -886,15 +967,15 @@ exports.submitAssignment = [auth, function (req, res) {
                                 } else {
                                     switch (errorAssignmentCollection[0].error) {
                                         case "TestCodeNull":
-                                            return apiResponse.conflictResponse(res, "Test code not found")
+                                            return apiResponse.conflictResponseWithData(res, "Test code not found", resolve.url);
                                         case "TestCodeWrong":
-                                            return apiResponse.conflictResponse(res, "Wrong test code")
+                                            return apiResponse.conflictResponseWithData(res, "Wrong test code", resolve.url)
                                         case "StudentIdNull":
-                                            return apiResponse.conflictResponse(res, "Student id not found")
+                                            return apiResponse.conflictResponseWithData(res, "Student id not found", resolve.url)
                                         case "StudentIdWrong":
-                                            return apiResponse.conflictResponse(res, "Student id wrong")
+                                            return apiResponse.conflictResponseWithData(res, "Student id wrong", resolve.url)
                                         default:
-                                            return apiResponse.conflictResponse(res, "Something wrong occurs")
+                                            return apiResponse.conflictResponseWithData(res, "Something wrong occurs", resolve.url)
                                     }
                                 }
 

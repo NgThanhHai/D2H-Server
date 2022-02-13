@@ -5,7 +5,7 @@ const imageProcessing = (test_id, type, url) => {
     return new Promise(function(resolve, reject) {
             var postBody = JSON.stringify({
             test_id: test_id,
-            type: type,
+            type: +type,
             url: url
             })
 
