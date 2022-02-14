@@ -461,7 +461,7 @@ exports.getAllTest = [auth, function (req, res) {
     }
 }]
 
-exports.getTest = [auth, function (req, res) {
+exports.getTest = [auth,async function (req, res) {
     var userId = req.user.user_id;
     var testId = req.params.testId;
     if (!testId || testId === "") {
@@ -630,7 +630,7 @@ exports.getTestStatistics = [auth, async function (req, res) {
 
 }]
 
-exports.deleteTest = [auth, function (req, res) {
+exports.deleteTest = [auth, async function (req, res) {
     var userId = req.user.user_id;
     var testId = req.params.testId;
     if (!testId || testId === "") {
@@ -697,7 +697,7 @@ exports.deleteTest = [auth, function (req, res) {
 }]
 
 
-exports.updateTest = [auth, function (req, res) {
+exports.updateTest = [auth, async function (req, res) {
     var userId = req.user.user_id;
     var testId = req.params.testId;
     if (!testId || testId === "") {
@@ -778,7 +778,7 @@ exports.updateTest = [auth, function (req, res) {
 }]
 
 
-exports.submitAssignment = [auth, function (req, res) {
+exports.submitAssignment = [auth, async function (req, res) {
     var userId = req.user.user_id
     var testId = req.body.test_id;
     var assignmentCollectionUrl = req.body.url
