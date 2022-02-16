@@ -936,7 +936,7 @@ exports.submitAssignment = [auth, async function (req, res) {
                                 {
                                     var endTime = performance.now();
                                     console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
-                                    return apiResponse.successResponseWithData(res, "Grade test successfully!", assignment)
+                                    return apiResponse.successResponseWithData(res, "Grade test successfully!", {assignment_id: assignment_id})
                                 } else {
                                     switch (errorAssignmentCollection[0].error) {
                                         case "TestCodeNull":
