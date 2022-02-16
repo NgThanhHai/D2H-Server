@@ -93,10 +93,10 @@ exports.createTest = [auth, function (req, res) {
                             case "image": {
                                 const imageProcessTask = []
                                 answerCollectionUrl.forEach(assignment => {
-                                    imageProcessTask.push(imageProcessing(test.test_id, Number(testconfig.paper_type), assignment))
+                                    imageProcessTask.push(imageProcessing(test.test_id, Number(testconfig.paper_type), "" , assignment))
                                 })
-                                const result = await Promise.all(imageProcessTask)
                                 try {
+                                    const result = await Promise.all(imageProcessTask)
                                     var isMC = false
                                     var numberOfQuestion = 0
                                     for (var i = 0; i < result.length; i++) {
@@ -822,7 +822,7 @@ exports.submitAssignment = [auth, async function (req, res) {
             if (test) {
                 const imageProcessTask = []
                 assignmentCollectionUrl.forEach(assignment => {
-                    imageProcessTask.push(imageProcessing(test.test_id, test.test_config.paper_type, assignment))
+                    imageProcessTask.push(imageProcessing(test.test_id, test.test_config.paper_type, "", assignment))
                 })
                 let result = await Promise.all(imageProcessTask)
                 try {
@@ -928,7 +928,6 @@ exports.submitAssignment = [auth, async function (req, res) {
 
                             if (result.length == 1) {
                                 if (errorAssignmentCollection.length === 0) {
-                                    console.log("url " + resolve.url)
                                     AssignmentModel.findOne({
                                         where: {
                                             image_url: resolve.url
@@ -936,7 +935,6 @@ exports.submitAssignment = [auth, async function (req, res) {
                                         order: [['createdAt', 'DESC']],
                                     }).then(async assignment => {
                                         if (assignment) {
-                                            console.log(assignment)
                                             var objectAnswer = JSON.parse(assignment.dataValues.answer);
                                             assignment.dataValues.answer = objectAnswer
                                             assignment.dataValues = convertCase(assignment.dataValues)
