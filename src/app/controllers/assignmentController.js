@@ -165,7 +165,7 @@ exports.getAssignment = [auth, function (req, res) {
                             }
                             var assignmentsCollection = []
                             for(var index = 0; index < testcodes.length; index++) {
-                                let assignments = await AssignmentModel.findAndCountAll({
+                                let assignment = await AssignmentModel.findOne({
                                     limit: limit,
                                     offset: offset,
                                     where : {
@@ -173,9 +173,7 @@ exports.getAssignment = [auth, function (req, res) {
                                         assignment_id: assignmentId
                                     }
                                 })
-                                for(var indexAssignment = 0; indexAssignment <  assignments.rows.length; indexAssignment++)
-                                {
-                                    let assignment = assignments.rows[indexAssignment]
+                                
                                     var objectAnswer = JSON.parse(assignment.dataValues.answer);
                                     assignment.dataValues.answer = objectAnswer
                                     assignment.dataValues = convertCase(assignment.dataValues)
@@ -184,7 +182,7 @@ exports.getAssignment = [auth, function (req, res) {
                                     assignment.dataValues.student_id = assignment.dataValues.studentStudentId
                                     delete assignment.dataValues.studentStudentId
                                     assignmentsCollection.push(assignment)
-                                }
+                                
                             }
                             
                             return apiResponse.successResponseWithPagingData(res, "success", assignmentsCollection , getPagingData(page), assignmentsCollection.length)
