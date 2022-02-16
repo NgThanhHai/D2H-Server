@@ -93,7 +93,7 @@ exports.createTest = [auth, function (req, res) {
                             case "image": {
                                 const imageProcessTask = []
                                 answerCollectionUrl.forEach(assignment => {
-                                    imageProcessTask.push(imageProcessing(test.test_id, Number(testconfig.paper_type), "" , assignment))
+                                    imageProcessTask.push(imageProcessing(test.test_id, Number(testconfig.paper_type), "", assignment))
                                 })
                                 try {
                                     const result = await Promise.all(imageProcessTask)
@@ -461,7 +461,7 @@ exports.getAllTest = [auth, function (req, res) {
     }
 }]
 
-exports.getTest = [auth,async function (req, res) {
+exports.getTest = [auth, async function (req, res) {
     var userId = req.user.user_id;
     var testId = req.params.testId;
     if (!testId || testId === "") {
@@ -481,7 +481,7 @@ exports.getTest = [auth,async function (req, res) {
         for (let index = 0; index < courseuser.length; index++) {
             courseuserCollection.push(courseuser[index].course_user_id)
         }
-        
+
         TestModel.findOne({
             include: [{
                 model: TestConfigModel, as: "test_config",
@@ -595,7 +595,7 @@ exports.getTestStatistics = [auth, async function (req, res) {
                             let upper = +index + +step
                             let lower = +index
                             let label = +lower + "_" + +upper
-                            if(+upper == +10){
+                            if (+upper == +10) {
                                 upper = 11
                             }
                             sir[label] = score_in_range(scoreCollection, lower, upper)
@@ -729,7 +729,7 @@ exports.updateTest = [auth, async function (req, res) {
                 return apiResponse.conflictResponse(res, "User not have access to this test")
             }
             if (tests) {
-                
+
                 delete tests.dataValues.course_user
                 var TestConfig = {
                     test_answer_type: req.body.result_type,
@@ -806,7 +806,7 @@ exports.submitAssignment = [auth, async function (req, res) {
         for (let index = 0; index < courseuser.length; index++) {
             courseuserCollection.push(courseuser[index].course_user_id)
         }
-        
+
         TestModel.findOne({
             where: {
                 test_id: testId
@@ -831,6 +831,7 @@ exports.submitAssignment = [auth, async function (req, res) {
                 try {
 
                     var errorAssignmentCollection = []
+                    let assignment_id = ""
                     for (var index = 0; index < result.length; index++) {
                         let resolve = result[index]
                         if (detectError(resolve) != "") {
@@ -844,66 +845,67 @@ exports.submitAssignment = [auth, async function (req, res) {
                                 answer: JSON.stringify(resolve.result.answer)
                             }
 
-                            AssignmentModel.create(assigntmentBody).then(assignment => {
-                                TestCodeModel.findOne({
-                                    where: {
-                                        test_code: resolve.result.code_id,
-                                        testTestId: resolve.test_id
-                                    }
-                                }).then(testcode => {
-                                    if (testcode) {
-                                        var tempAssignmentAnswer = JSON.parse(assignment.answer)
-                                        var tempTestAnswer = JSON.parse(testcode.test_answer)
+                            let assignment = await AssignmentModel.create(assigntmentBody)
+                            assignment_id = assignment.assignment_id
+                            TestCodeModel.findOne({
+                                where: {
+                                    test_code: resolve.result.code_id,
+                                    testTestId: resolve.test_id
+                                }
+                            }).then(testcode => {
+                                if (testcode) {
+                                    var tempAssignmentAnswer = JSON.parse(assignment.answer)
+                                    var tempTestAnswer = JSON.parse(testcode.test_answer)
 
-                                        if (Object.keys(tempAssignmentAnswer).length > Object.keys(tempTestAnswer).length) {
-                                            for (var i = Object.keys(tempAssignmentAnswer).length; i >= Object.keys(tempTestAnswer).length + 1; i--) {
-                                                var property = i + ""
-                                                delete tempAssignmentAnswer[property]
-                                            }
+                                    if (Object.keys(tempAssignmentAnswer).length > Object.keys(tempTestAnswer).length) {
+                                        for (var i = Object.keys(tempAssignmentAnswer).length; i >= Object.keys(tempTestAnswer).length + 1; i--) {
+                                            var property = i + ""
+                                            delete tempAssignmentAnswer[property]
                                         }
-
-                                        var result = diff(tempAssignmentAnswer, tempTestAnswer)
-                                        var grade = countMatchPercentage(result)
-                                        AssignmentModel.update({
-                                            testCodeTestCodeId: testcode.test_code_id,
-                                            grade: grade,
-                                            status: "graded"
-                                        }, {
-                                            where: {
-                                                assignment_id: assignment.assignment_id
-                                            }
-                                        })
                                     }
-                                })
 
-                                StudentModel.findOne({
-                                    where: {
-                                        student_id: resolve.result.student_id
-                                    }
-                                }).then(student => {
-                                    if (!student) {
-                                        var student = {
-                                            student_id: resolve.result.student_id,
-                                            student_name: resolve.result.student_id,
-                                            mail: resolve.result.student_id + '@gmail.com'
+                                    var result = diff(tempAssignmentAnswer, tempTestAnswer)
+                                    var grade = countMatchPercentage(result)
+                                    AssignmentModel.update({
+                                        testCodeTestCodeId: testcode.test_code_id,
+                                        grade: grade,
+                                        status: "graded"
+                                    }, {
+                                        where: {
+                                            assignment_id: assignment.assignment_id
                                         }
-                                        StudentModel.create(student).then(student => {
-                                            AssignmentModel.update({ studentStudentId: student.student_id }, {
-                                                where: {
-                                                    assignment_id: assignment.assignment_id
-                                                }
-                                            })
-                                        })
-                                    } else {
+                                    })
+                                }
+                            })
+
+                            StudentModel.findOne({
+                                where: {
+                                    student_id: resolve.result.student_id
+                                }
+                            }).then(student => {
+                                if (!student) {
+                                    var student = {
+                                        student_id: resolve.result.student_id,
+                                        student_name: resolve.result.student_id,
+                                        mail: resolve.result.student_id + '@gmail.com'
+                                    }
+                                    StudentModel.create(student).then(student => {
                                         AssignmentModel.update({ studentStudentId: student.student_id }, {
                                             where: {
                                                 assignment_id: assignment.assignment_id
                                             }
                                         })
-                                    }
+                                    })
+                                } else {
+                                    AssignmentModel.update({ studentStudentId: student.student_id }, {
+                                        where: {
+                                            assignment_id: assignment.assignment_id
+                                        }
+                                    })
+                                }
 
-                                })
                             })
+                            
                         }
 
                         if (+index === result.length - 1) {
@@ -930,41 +932,11 @@ exports.submitAssignment = [auth, async function (req, res) {
                             })
 
                             if (result.length == 1) {
-                                if (errorAssignmentCollection.length === 0) {
-                                    AssignmentModel.findOne({
-                                        where: {
-                                            image_url: resolve.url
-                                        },
-                                        order: [['createdAt', 'DESC']],
-                                    }).then(async assignment => {
-                                        if (assignment) {
-                                            var objectAnswer = JSON.parse(assignment.dataValues.answer);
-                                            assignment.dataValues.answer = objectAnswer
-                                            assignment.dataValues = convertCase(assignment.dataValues)
-                                            var testcode = await TestCodeModel.findOne({
-                                                where: {
-                                                    test_code_id: assignment.dataValues.testCodeTestCodeId
-                                                }
-                                            })
-                                            if (!testcode) {
-                                                return apiResponse.conflictResponse(res, "Can not find test code")
-                                            } else {
-
-                                                assignment.dataValues.test_code = testcode.dataValues.test_code
-                                                delete assignment.dataValues.testCodeTestCodeId
-                                                assignment.dataValues.student_id = assignment.dataValues.studentStudentId
-                                                delete assignment.dataValues.studentStudentId
-
-                                                var endTime = performance.now();
-                                                console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
-                                                return apiResponse.successResponseWithData(res, "Grade test successfully!", assignment)
-                                            }
-                                        } else {
-                                            var endTime = performance.now();
-                                            console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
-                                            return apiResponse.badRequestResponse(res, "Something wrong occurs")
-                                        }
-                                    })
+                                if (errorAssignmentCollection.length === 0) 
+                                {
+                                    var endTime = performance.now();
+                                    console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
+                                    return apiResponse.successResponseWithData(res, "Grade test successfully!", assignment)
                                 } else {
                                     switch (errorAssignmentCollection[0].error) {
                                         case "TestCodeNull":
