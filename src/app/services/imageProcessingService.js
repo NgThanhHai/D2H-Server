@@ -9,10 +9,12 @@ const imageProcessing = (test_id, type, answer, url) => {
             test_answer: answer,
             url: url
         })
+        
+        let convertedBody = postBody.replace(/'/g, '"');
         axios({
             method: 'post',
             url: ImageProcessingBasicURL,
-            data: postBody
+            data: convertedBody
         }).then(response => {
             if (!response.data) {
                 reject("Error when calling api!")

@@ -8,4 +8,4 @@ router.post('/', AssignmentController.getAllAssignment)
 router.post('/single-assignment', AssignmentController.getAssignment)
 
 
-module.exports = router;
+module.exports = router

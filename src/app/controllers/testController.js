@@ -823,9 +823,18 @@ exports.submitAssignment = [auth, async function (req, res) {
                 return apiResponse.conflictResponse(res, "User not have access to this test")
             }
             if (test) {
+                let testcodes = await TestCodeModel.findAll({
+                    where: {
+                        testTestId: test.test_id
+                    }
+                })
+                let test_answer = {}
+                for(let testcode_index = 0; testcode_index < testcodes.length; testcode_index++) {
+                    test_answer[testcodes[testcode_index].test_code] = JSON.parse(testcodes[testcode_index].test_answer)
+                }
                 const imageProcessTask = []
                 assignmentCollectionUrl.forEach(assignment => {
-                    imageProcessTask.push(imageProcessing(test.test_id, test.test_config.paper_type, "", assignment))
+                    imageProcessTask.push(imageProcessing(test.test_id, test.test_config.paper_type, test_answer, assignment))
                 })
                 let result = await Promise.all(imageProcessTask)
                 try {
@@ -840,7 +849,7 @@ exports.submitAssignment = [auth, async function (req, res) {
                             errorAssignmentCollection.push(errorAssignment)
                         } else {
                             var assigntmentBody = {
-                                image_url: resolve.url,
+                                image_url: resolve.draw_image,
                                 status: "new",
                                 answer: JSON.stringify(resolve.result.answer)
                             }
@@ -940,15 +949,15 @@ exports.submitAssignment = [auth, async function (req, res) {
                                 } else {
                                     switch (errorAssignmentCollection[0].error) {
                                         case "TestCodeNull":
-                                            return apiResponse.conflictResponseWithData(res, "Test code not found", resolve.url);
+                                            return apiResponse.conflictResponseWithData(res, "Test code not found", resolve.draw_image);
                                         case "TestCodeWrong":
-                                            return apiResponse.conflictResponseWithData(res, "Wrong test code", resolve.url)
+                                            return apiResponse.conflictResponseWithData(res, "Wrong test code", resolve.draw_image)
                                         case "StudentIdNull":
-                                            return apiResponse.conflictResponseWithData(res, "Student id not found", resolve.url)
+                                            return apiResponse.conflictResponseWithData(res, "Student id not found", resolve.draw_image)
                                         case "StudentIdWrong":
-                                            return apiResponse.conflictResponseWithData(res, "Student id wrong", resolve.url)
+                                            return apiResponse.conflictResponseWithData(res, "Student id wrong", resolve.draw_image)
                                         default:
-                                            return apiResponse.conflictResponseWithData(res, "Something wrong occurs", resolve.url)
+                                            return apiResponse.conflictResponseWithData(res, "Something wrong occurs", resolve.draw_image)
                                     }
                                 }
 
