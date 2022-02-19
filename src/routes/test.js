@@ -13,4 +13,5 @@ router.post("/grade", TestController.submitAssignment)
 router.post("/submit-answer", TestController.submitTestAnswer)
 router.get("/get-test-statistic/:testId", TestController.getTestStatistics)
 router.post("/export-test", TestController.exportTest)
+router.get("/get-all-test-statistics/:courseId", TestController.getAllTestStatistics)
 module.exports = router;

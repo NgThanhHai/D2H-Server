@@ -8,9 +8,10 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_SECRET
 });
 
+
 const storage = new CloudinaryStorage({
   cloudinary,
-  allowedFormats: ['jpg', 'png', 'xlsx', 'csv'],
+  allowedFormats: ['jpg', 'png', 'raw'],
   filename: function (req, file, cb) {
     cb(null, file.originalname); 
   }

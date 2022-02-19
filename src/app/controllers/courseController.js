@@ -267,3 +267,5 @@ exports.updateCourse = [auth, function (req, res) {
         return apiResponse.ErrorResponse(res, err)
     }
 }]
+
+

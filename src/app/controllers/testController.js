@@ -829,7 +829,7 @@ exports.submitAssignment = [auth, async function (req, res) {
                     }
                 })
                 let test_answer = {}
-                for(let testcode_index = 0; testcode_index < testcodes.length; testcode_index++) {
+                for (let testcode_index = 0; testcode_index < testcodes.length; testcode_index++) {
                     test_answer[testcodes[testcode_index].test_code] = JSON.parse(testcodes[testcode_index].test_answer)
                 }
                 const imageProcessTask = []
@@ -914,7 +914,7 @@ exports.submitAssignment = [auth, async function (req, res) {
                                 }
 
                             })
-                            
+
                         }
 
                         if (+index === result.length - 1) {
@@ -941,11 +941,10 @@ exports.submitAssignment = [auth, async function (req, res) {
                             })
 
                             if (result.length == 1) {
-                                if (errorAssignmentCollection.length === 0) 
-                                {
+                                if (errorAssignmentCollection.length === 0) {
                                     var endTime = performance.now();
                                     console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
-                                    return apiResponse.successResponseWithData(res, "Grade test successfully!", {assignment_id: assignment_id})
+                                    return apiResponse.successResponseWithData(res, "Grade test successfully!", { assignment_id: assignment_id })
                                 } else {
                                     switch (errorAssignmentCollection[0].error) {
                                         case "TestCodeNull":
@@ -1094,4 +1093,146 @@ exports.exportTest = [auth, async function (req, res) {
     } catch (ex) {
         return apiResponse.ErrorResponse(res, ex)
     }
+}]
+
+
+exports.getAllTestStatistics = [auth, async function (req, res) {
+    var userId = req.user.user_id;
+    var courseId = req.params.courseId;
+    var step = req.query.step
+    var size = req.query.size
+    var page = req.query.page
+    var conditionName = req.query.name
+    var status = req.query.status
+    const { limit, offset } = getPagination(page, size);
+
+    var startDate = req.query.start_date ? req.query.start_date : null
+    var endDate = req.query.end_date ? req.query.end_date : null
+    if (!courseId || courseId === "") {
+        return apiResponse.badRequestResponse(res, "Course id is required")
+    }
+
+    try {
+        CourseUserModel.findOne({
+            where: {
+                course_id: courseId,
+                user_id: userId
+            }
+        })
+            .then(courseuser => {
+                if (!courseuser) {
+                    return apiResponse.badRequestResponse(res, "Course do not exist or you do not have permission to access")
+                }
+                else {
+                    TestModel.findAndCountAll({
+                        where: { courseUserCourseUserId: courseuser.dataValues.course_user_id }
+                        ,
+                        limit: limit,
+                        offset: offset,
+                        include: [{
+                            model: TestConfigModel, as: "test_config"
+                        }, {
+                            model: TestCodeModel, as: "test_codes"
+                        }]
+                    }).
+                        then(async tests => {
+                            if (tests.rows.length > 0) {
+                                var testCollection = tests.rows
+                                if (!conditionName || conditionName === "") {
+
+                                } else {
+                                    testCollection = testCollection.filter(function (t) {
+                                        return (t.dataValues.test_name.includes(conditionName))
+                                    })
+                                }
+
+                                if (startDate && startDate !== "") {
+                                    var lowerFilterTime = moment(startDate, "DD/MM/YYYY").format("LL")
+                                    testCollection = testCollection.filter(function (t) {
+                                        var lookupDate = moment(t.dataValues.createdAt, "DD/MM/YYYY").format("LL")
+                                        return (new Date(lookupDate) >= new Date(lowerFilterTime))
+                                    })
+                                }
+                                if (endDate && endDate !== "") {
+                                    var upperFilterTime = moment(endDate, "DD/MM/YYYY").format("LL")
+                                    testCollection = testCollection.filter(function (t) {
+                                        var lookupDate = moment(t.dataValues.createdAt, "DD/MM/YYYY").format("LL")
+                                        return (new Date(lookupDate) <= new Date(upperFilterTime))
+                                    })
+
+                                }
+                                if (status !== undefined && status !== "") {
+                                    var testCollection = testCollection.filter(function (t) {
+                                        return status === t.dataValues.status
+                                    })
+                                }
+
+                                let testStatistics = []
+
+                                for (let test_index = 0; test_index < testCollection.length; test_index++) {
+                                    let unit = testCollection[test_index]
+                                    let testcodes = await TestCodeModel.findAll({
+                                        where: {
+                                            testTestId: unit.dataValues.test_id
+                                        },
+                                        include: [{
+                                            model: AssignmentModel, as: "assigments",
+                                            required: true
+                                        }]
+                                    })
+                                    let scoreCollection = []
+                                    testcodes.forEach(testcode => {
+                                        testcode.assigments.forEach(assigment => {
+                                            scoreCollection.push(assigment.dataValues.grade * 10)
+                                        })
+                                    })
+
+                                    let sir = {}
+
+                                    for (let index = 0; index < 10; index = +index + +step) {
+                                        let upper = +index + +step
+                                        let lower = +index
+                                        let label = +lower + "_" + +upper
+                                        if (+upper == +10) {
+                                            upper = 11
+                                        }
+                                        sir[label] = score_in_range(scoreCollection, lower, upper)
+                                    }
+
+
+
+                                    var body = {
+                                        test_id: unit.dataValues.test_id,
+                                        test_name: unit.dataValues.test_name,
+                                        total_assignments: scoreCollection.length,
+                                        average_score: average_score(scoreCollection),
+                                        median_score: median_score(scoreCollection),
+                                        noas_under_ten_percent: count_under_marked_score(scoreCollection, 1),
+                                        noas_under_fifthty_percent: count_under_marked_score(scoreCollection, 5),
+                                        noas_reach_hundred_percent: count_archive_marked_score(scoreCollection, 10),
+                                        score_achived_by_most_assignment: highest_score_archived(scoreCollection),
+                                        score_at_good: score_in_range(scoreCollection, 8, 11),
+                                        score_at_rather: score_in_range(scoreCollection, 6.5, 8),
+                                        score_at_medium: score_in_range(scoreCollection, 5, 6.5),
+                                        score_at_weak: score_in_range(scoreCollection, 0, 5),
+                                        score_in_range: sir
+                                    }
+                                    testStatistics.push(body)
+
+                                }
+
+                                return apiResponse.successResponseWithData(res, "Export statistic successfully", testStatistics)
+
+                            } else {
+                                return apiResponse.conflictResponse(res, "Test not existed")
+                            }
+                        })
+                }
+            })
+
+    } catch (err) {
+
+        return apiResponse.ErrorResponse(res, err)
+    }
+
 }]
