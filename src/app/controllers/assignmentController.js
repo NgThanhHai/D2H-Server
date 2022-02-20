@@ -20,8 +20,8 @@ exports.getAllAssignment = [auth, function (req, res) {
     var size = req.query.size
     var page = req.query.page
 
-    let startGrade = req.body.start_grade ? req.body.start_grade : 0
-    let endGrade = req.body.end_grade ? req.body.end_grade : 10
+    let startGrade = req.query.start_grade ? req.query.start_grade : 0
+    let endGrade = req.query.end_grade ? req.query.end_grade : 10
 
     let startDate = req.query.start_date ? req.query.start_date : null
     let endDate = req.query.end_date ? req.query.end_date : null
