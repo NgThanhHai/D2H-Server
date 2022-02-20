@@ -123,6 +123,8 @@ exports.getAllAssignment = [auth, function (req, res) {
                             {
                                 assignmentsCollection = assignmentsCollection.filter(function (t) {
                                     console.log(t.student_id == studentId)
+                                    console.log(typeof studentId)
+                                    console.log(typeof t.student_id)
                                     return t.student_id == studentId
                                 })
                             }
