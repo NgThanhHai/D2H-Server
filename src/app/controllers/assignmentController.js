@@ -19,6 +19,14 @@ exports.getAllAssignment = [auth, function (req, res) {
     var size = req.query.size
     var page = req.query.page
 
+    let startGrade = req.body.start_grade ? req.body.start_grade : 0
+    let endGrade = req.body.end_grade ? req.body.end_grade : 10
+
+    let startDate = req.query.start_date ? req.query.start_date : null
+    let endDate = req.query.end_date ? req.query.end_date : null
+
+    let studentId = req.query.student_id ? req.query.student_id : null
+
     const { limit, offset } = getPagination(page, size);
     if(!testId || testId === "")
     {
@@ -67,6 +75,7 @@ exports.getAllAssignment = [auth, function (req, res) {
                                     return t.test_code.toString() === testCode.toString()
                                 })
                             }
+                            
                             var assignmentsCollection = []
                             for(var index = 0; index < testcodes.length; index++) {
                                 let assignments = await AssignmentModel.findAndCountAll({
@@ -86,10 +95,35 @@ exports.getAllAssignment = [auth, function (req, res) {
                                     delete assignment.dataValues.testCodeTestCodeId
                                     assignment.dataValues.student_id = assignment.dataValues.studentStudentId
                                     delete assignment.dataValues.studentStudentId
+                                    assignment.dataValues.grade = assignment.dataValues.grade*10
                                     assignmentsCollection.push(assignment)
+                                    
                                 }
                             }
-                            
+                            if (startDate && startDate !== "") {
+                                var lowerFilterTime = moment(startDate, "DD/MM/YYYY").format("LL")
+                                assignmentsCollection = assignmentsCollection.filter(function (t) {
+                                    var lookupDate = moment(t.dataValues.created_at, "DD/MM/YYYY").format("LL")
+                                    return (new Date(lookupDate) >= new Date(lowerFilterTime))
+                                })
+                            }
+                            if (endDate && endDate !== "") {
+                                var upperFilterTime = moment(endDate, "DD/MM/YYYY").format("LL")
+                                assignmentsCollection = assignmentsCollection.filter(function (t) {
+                                    var lookupDate = moment(t.dataValues.created_at, "DD/MM/YYYY").format("LL")
+                                    return (new Date(lookupDate) <= new Date(upperFilterTime))
+                                })
+
+                            }
+                            assignmentsCollection = assignmentsCollection.filter(function (t) {
+                                return t.grade  >= startGrade && t.grade <= endGrade
+                            })
+                            if(studentId && studentId !== "")
+                            {
+                                assignmentsCollection = assignmentsCollection.filter(function (t) {
+                                    return t.student_id  === studentId
+                                })
+                            }
                             return apiResponse.successResponseWithPagingData(res, "success", assignmentsCollection , getPagingData(page), assignmentsCollection.length)
 
                         } else {
