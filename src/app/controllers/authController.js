@@ -26,13 +26,10 @@ exports.signUp = function(req, res) {
 				 username: username
 		   }
 		})
-		   .then((user, err) =>{
+		   .then((user) =>{
 		   if(user){
 			   return apiResponse.conflictResponse(res, "Username already exist")
 		   }else {
-			   if(err){
-				   return apiResponse.ErrorResponse(res, err)
-			   }else {
 				   bcrypt.hash(password, 10, (err, hash) => {
 					   var newUser = {
 						   username: username,
@@ -60,7 +57,7 @@ exports.signUp = function(req, res) {
 					   })
 					   
 				   })
-			   }  
+			   
 		   }	   
 	   })
 	}catch(ex) {
