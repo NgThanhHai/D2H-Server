@@ -122,8 +122,8 @@ exports.getAllAssignment = [auth, function (req, res) {
                             if(studentId && studentId !== "")
                             {
                                 assignmentsCollection = assignmentsCollection.filter(function (t) {
-                                    console.log(t.student_id == studentId.toString())
-                                    return t.student_id == studentId.toString()
+                                    console.log(t.student_id == studentId)
+                                    return t.student_id == studentId
                                 })
                             }
                             return apiResponse.successResponseWithPagingData(res, "success", assignmentsCollection , getPagingData(page), assignmentsCollection.length)
