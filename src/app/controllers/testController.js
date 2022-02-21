@@ -840,12 +840,9 @@ exports.submitAssignment = [auth, async function (req, res) {
                 //     test_answer[testcodes[testcode_index].test_code] = JSON.parse(testcodes[testcode_index].test_answer)
                 // }
                 const imageProcessTask = []
-                let indexi = 0
                 assignmentCollectionUrl.forEach(assignment => {
                     //imageProcessTask.push(imageProcessing(test.test_id, test.test_config.paper_type, test_answer, assignment))
                     imageProcessTask.push(imageProcessing(test.test_id, test.test_config.paper_type, "", assignment))
-                    console.log(indexi + " " + assignment)
-                    indexi++
                 })
                 res.status(200).json({success: true, message: "Request grade test successfully, the result will be send to your email"})
                 res.end()
@@ -856,7 +853,6 @@ exports.submitAssignment = [auth, async function (req, res) {
                     let assignment_id = ""
                     for (var index = 0; index < result.length; index++) {
                         let resolve = result[index]
-                        console.log(resolve)
                         if (detectError(resolve) != "") {
                             var errorAssignment = resolve
                             errorAssignment.error = detectError(resolve)
@@ -1125,8 +1121,6 @@ exports.getAllTestStatistics = [auth, async function (req, res) {
     var userId = req.user.user_id;
     var courseId = req.params.courseId;
     var step = req.query.step
-    var size = req.query.size
-    var page = req.query.page
     var conditionName = req.query.name
     var status = req.query.status
     const { limit, offset } = getPagination(page, size);
@@ -1150,10 +1144,7 @@ exports.getAllTestStatistics = [auth, async function (req, res) {
                 }
                 else {
                     TestModel.findAndCountAll({
-                        where: { courseUserCourseUserId: courseuser.dataValues.course_user_id }
-                        ,
-                        limit: limit,
-                        offset: offset,
+                        where: { courseUserCourseUserId: courseuser.dataValues.course_user_id },
                         include: [{
                             model: TestConfigModel, as: "test_config"
                         }, {
