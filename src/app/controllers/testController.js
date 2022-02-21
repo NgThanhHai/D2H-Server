@@ -448,7 +448,7 @@ exports.getAllTest = [auth, function (req, res) {
                                 return apiResponse.successResponseWithPagingData(res, "Success", testCollection, getPagingData(page), testCollection.length)
 
                             } else {
-                                return apiResponse.successResponseWithData(res, "Test not existed", {})
+                                return apiResponse.successResponseWithPagingData(res, "Test not existed", [], getPagingData(page), 0)
                             }
                         }).catch(err => {
 
