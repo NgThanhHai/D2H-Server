@@ -9,6 +9,7 @@ var apiResponse = require('./src/app/helpers/apiResponse');
 const { body } = require('express-validator/check');
 const dotenv = require('dotenv').config();
 const cors = require('cors');
+let REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
 
 if (dotenv.error) {
     throw dotenv.error;

@@ -30,6 +30,8 @@ const { sendMail, messageParser } = require('./../services/mailService');
 const cloneDeep = require('../../utils/cloneDeep')
 const { copyFileSync } = require('fs');
 const { resolve } = require('path');
+let REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
+// let workQueue = new Queue('work', REDIS_URL);
 
 exports.createTest = [auth, function (req, res) {
     var userId = req.user.user_id;
@@ -823,22 +825,25 @@ exports.submitAssignment = [auth, async function (req, res) {
                 return apiResponse.conflictResponse(res, "User not have access to this test")
             }
             if (test) {
-                let testcodes = await TestCodeModel.findAll({
-                    where: {
-                        testTestId: test.test_id
-                    }
-                })
-                let test_answer = {}
-                for (let testcode_index = 0; testcode_index < testcodes.length; testcode_index++) {
-                    test_answer[testcodes[testcode_index].test_code] = JSON.parse(testcodes[testcode_index].test_answer)
-                }
+                // let testcodes = await TestCodeModel.findAll({
+                //     where: {
+                //         testTestId: test.test_id
+                //     }
+                // })
+                // let test_answer = {}
+                // for (let testcode_index = 0; testcode_index < testcodes.length; testcode_index++) {
+                //     test_answer[testcodes[testcode_index].test_code] = JSON.parse(testcodes[testcode_index].test_answer)
+                // }
                 const imageProcessTask = []
                 assignmentCollectionUrl.forEach(assignment => {
-                    imageProcessTask.push(imageProcessing(test.test_id, test.test_config.paper_type, test_answer, assignment))
+                    //imageProcessTask.push(imageProcessing(test.test_id, test.test_config.paper_type, test_answer, assignment))
+                    imageProcessTask.push(imageProcessing(test.test_id, test.test_config.paper_type, "", assignment))
                 })
-                let result = await Promise.all(imageProcessTask)
+                res.status(200).json({success: true, message: "Request grade test successfully, the result will be send to your email"})
+                res.end()
                 try {
 
+                    let result = await Promise.all(imageProcessTask)
                     var errorAssignmentCollection = []
                     let assignment_id = ""
                     for (var index = 0; index < result.length; index++) {
@@ -940,36 +945,46 @@ exports.submitAssignment = [auth, async function (req, res) {
                                 }
                             })
 
-                            if (result.length == 1) {
-                                if (errorAssignmentCollection.length === 0) {
-                                    var endTime = performance.now();
-                                    console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
-                                    return apiResponse.successResponseWithData(res, "Grade test successfully!", { assignment_id: assignment_id })
-                                } else {
-                                    switch (errorAssignmentCollection[0].error) {
-                                        case "TestCodeNull":
-                                            return apiResponse.conflictResponseWithData(res, "Test code not found", resolve.draw_image);
-                                        case "TestCodeWrong":
-                                            return apiResponse.conflictResponseWithData(res, "Wrong test code", resolve.draw_image)
-                                        case "StudentIdNull":
-                                            return apiResponse.conflictResponseWithData(res, "Student id not found", resolve.draw_image)
-                                        case "StudentIdWrong":
-                                            return apiResponse.conflictResponseWithData(res, "Student id wrong", resolve.draw_image)
-                                        default:
-                                            return apiResponse.conflictResponseWithData(res, "Something wrong occurs", resolve.draw_image)
-                                    }
-                                }
+                            // if (result.length == 1) {
+                            //     if (errorAssignmentCollection.length === 0) {
+                            //         var endTime = performance.now();
+                            //         console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
+                            //         return apiResponse.successResponseWithData(res, "Grade test successfully!", { assignment_id: assignment_id })
+                            //     } else {
+                            //         switch (errorAssignmentCollection[0].error) {
+                            //             case "TestCodeNull":
+                            //                 return apiResponse.conflictResponseWithData(res, "Test code not found", resolve.draw_image);
+                            //             case "TestCodeWrong":
+                            //                 return apiResponse.conflictResponseWithData(res, "Wrong test code", resolve.draw_image)
+                            //             case "StudentIdNull":
+                            //                 return apiResponse.conflictResponseWithData(res, "Student id not found", resolve.draw_image)
+                            //             case "StudentIdWrong":
+                            //                 return apiResponse.conflictResponseWithData(res, "Student id wrong", resolve.draw_image)
+                            //             default:
+                            //                 return apiResponse.conflictResponseWithData(res, "Something wrong occurs", resolve.draw_image)
+                            //         }
+                            //     }
 
-                            } else {
+                            // } else {
 
-                                var endTime = performance.now();
-                                console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
-                                return apiResponse.successResponse(res, "Grade test successfully!")
-                            }
+                            //     var endTime = performance.now();
+                            //     console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
+                            //     return apiResponse.successResponse(res, "Grade test successfully!")
+                            // }
                         }
                     }
                 } catch (err) {
-                    return apiResponse.ErrorResponse(res, err)
+                    console.log(err)
+                    UserModel.findOne({
+                        where: {
+                            user_id: userId
+                        }
+                    }).then(user => {
+                        if (!user) { }
+                        else {
+                            sendMail(user.dataValues.mail, "Grade test failed, please try again!", "")
+                        }
+                    })
                 }
             } else {
                 return apiResponse.badRequestResponse(res, "Test not exist!")
