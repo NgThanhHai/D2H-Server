@@ -1113,7 +1113,7 @@ exports.exportTest = [auth, async function (req, res) {
             // res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
             // res.setHeader("Content-Disposition", "attachment; filename=" + fileName);
             await workbook.xlsx.writeFile(fileName).then(function () {
-                cloudinary.uploader.upload(__basedir + "/export_test_grade.xlsx",
+                cloudinary.uploader.upload("export_test_grade.xlsx",
                     { resource_type: "auto" },
                     function (error, result) {
                          return apiResponse.successResponseWithData(res, "Success", { path: result.url })
