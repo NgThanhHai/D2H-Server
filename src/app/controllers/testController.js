@@ -854,7 +854,7 @@ exports.submitAssignment = [auth, async function (req, res) {
                             errorAssignmentCollection.push(errorAssignment)
                         } else {
                             var assigntmentBody = {
-                                image_url: resolve.draw_image,
+                                image_url: resolve.url,
                                 status: "new",
                                 answer: JSON.stringify(resolve.result.answer)
                             }
