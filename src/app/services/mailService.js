@@ -1,6 +1,6 @@
 const nodemailer = require('nodemailer');
 
-const messageParser = (errorAssigmentCollection) => {
+const messageParser = (testname, errorAssigmentCollection) => {
   let message = {}
   message.TestCodeNull = {}
   message.TestCodeWrong = {}
@@ -37,7 +37,7 @@ const messageParser = (errorAssigmentCollection) => {
         // code block
     }
   })
-  var returnMessage = "Đã hoàn thành chấm bài. "
+  var returnMessage = "Đã hoàn thành chấm bài kiem tra " + testname + " ."
   if(message.TestCodeNull.Number > 0)
   {
     var index = 1

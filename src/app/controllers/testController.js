@@ -945,7 +945,8 @@ exports.submitAssignment = [auth, async function (req, res) {
                             }).then(user => {
                                 if (!user) { }
                                 else {
-                                    var message = messageParser(errorAssignmentCollection)
+                                    var message = messageParser(test.dataValues.test_name, errorAssignmentCollection)
+                                    
                                     sendMail(user.dataValues.mail, "Submit Assigment Completed", message)
                                 }
                             })
