@@ -10,7 +10,7 @@ const { body } = require('express-validator/check');
 const dotenv = require('dotenv').config();
 const cors = require('cors');
 let REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
-global.__basedir = __dirname + "/..";
+global.__basedir = __dirname + "/";
 if (dotenv.error) {
     throw dotenv.error;
 }
