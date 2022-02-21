@@ -1114,7 +1114,7 @@ exports.exportTest = [auth, async function (req, res) {
             // res.setHeader("Content-Disposition", "attachment; filename=" + fileName);
             await workbook.xlsx.writeFile(fileName).then(function () {
                 cloudinary.uploader.upload(__basedir + "/export_test_grade.xlsx",
-                    { resource_type: "raw" },
+                    { resource_type: "auto" },
                     function (error, result) {
                          return apiResponse.successResponseWithData(res, "Success", { path: result.url })
                     });
