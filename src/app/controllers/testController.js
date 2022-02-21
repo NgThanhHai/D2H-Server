@@ -1123,7 +1123,6 @@ exports.getAllTestStatistics = [auth, async function (req, res) {
     var step = req.query.step
     var conditionName = req.query.name
     var status = req.query.status
-    const { limit, offset } = getPagination(page, size);
 
     var startDate = req.query.start_date ? req.query.start_date : null
     var endDate = req.query.end_date ? req.query.end_date : null
