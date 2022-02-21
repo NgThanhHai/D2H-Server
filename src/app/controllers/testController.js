@@ -31,6 +31,13 @@ const cloneDeep = require('../../utils/cloneDeep')
 const { copyFileSync } = require('fs');
 const { resolve } = require('path');
 let REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
+const cloudinary = require('cloudinary').v2;
+
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_NAME,
+    api_key: process.env.CLOUDINARY_KEY,
+    api_secret: process.env.CLOUDINARY_SECRET
+});
 // let workQueue = new Queue('work', REDIS_URL);
 
 exports.createTest = [auth, function (req, res) {
@@ -599,9 +606,9 @@ exports.getTestStatistics = [auth, async function (req, res) {
                             let label = ""
                             if (+upper >= +10) {
                                 upper = 11
-                                
+
                                 label = +lower + "_10"
-                            }else {
+                            } else {
 
                                 label = +lower + "_" + +upper
                             }
@@ -844,7 +851,7 @@ exports.submitAssignment = [auth, async function (req, res) {
                     //imageProcessTask.push(imageProcessing(test.test_id, test.test_config.paper_type, test_answer, assignment))
                     imageProcessTask.push(imageProcessing(test.test_id, test.test_config.paper_type, "", assignment))
                 })
-                res.status(200).json({success: true, message: "Request grade test successfully, the result will be send to your email"})
+                res.status(200).json({ success: true, message: "Request grade test successfully, the result will be send to your email" })
                 res.end()
                 try {
 
@@ -946,7 +953,7 @@ exports.submitAssignment = [auth, async function (req, res) {
                                 if (!user) { }
                                 else {
                                     var message = messageParser(test.dataValues.test_name, errorAssignmentCollection)
-                                    
+
                                     sendMail(user.dataValues.mail, "Submit Assigment Completed", message)
                                 }
                             })
@@ -1103,10 +1110,14 @@ exports.exportTest = [auth, async function (req, res) {
             }
             var fileName = 'export_test_grade.xlsx';
 
-            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-            res.setHeader("Content-Disposition", "attachment; filename=" + fileName);
-            workbook.xlsx.write(res).then(function () {
-                res.end();
+            // res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            // res.setHeader("Content-Disposition", "attachment; filename=" + fileName);
+            await workbook.xlsx.writeFile(fileName).then(function () {
+                cloudinary.uploader.upload(fileName,
+                    { resource_type: "raw" },
+                    function (error, result) {
+                         return apiResponse.successResponseWithData(res, "Success", { path: result.url })
+                    });
             });
         } else {
             return apiResponse.badRequestResponse(res, "No test to export")
