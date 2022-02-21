@@ -853,6 +853,7 @@ exports.submitAssignment = [auth, async function (req, res) {
                     let assignment_id = ""
                     for (var index = 0; index < result.length; index++) {
                         let resolve = result[index]
+                        console.log(resolve)
                         if (detectError(resolve) != "") {
                             var errorAssignment = resolve
                             errorAssignment.error = detectError(resolve)
