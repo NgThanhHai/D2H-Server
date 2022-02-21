@@ -78,7 +78,6 @@ exports.getAllAssignment = [auth, function (req, res) {
                             }
                             
                             var assignmentsCollection = []
-                            let totalAssignment = 0
                             for(var index = 0; index < testcodes.length; index++) {
                                 let assignments = await AssignmentModel.findAndCountAll({
                                     limit: limit,
@@ -87,7 +86,6 @@ exports.getAllAssignment = [auth, function (req, res) {
                                         testCodeTestCodeId: testcodes[index].test_code_id
                                     }
                                 })
-                                totalAssignment += assignments.count
                                 for(var indexAssignment = 0; indexAssignment <  assignments.rows.length; indexAssignment++)
                                 {
                                     let assignment = assignments.rows[indexAssignment]
@@ -127,7 +125,7 @@ exports.getAllAssignment = [auth, function (req, res) {
                                     return t.dataValues.student_id.includes(studentId)
                                 })
                             }
-                            return apiResponse.successResponseWithPagingData(res, "success", assignmentsCollection , getPagingData(page), totalAssignment)
+                            return apiResponse.successResponseWithPagingData(res, "success", assignmentsCollection , getPagingData(page), assignmentsCollection.length)
 
                         } else {
                             return apiResponse.badRequestResponse(res, "Test do not have test code")
