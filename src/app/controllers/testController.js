@@ -596,9 +596,14 @@ exports.getTestStatistics = [auth, async function (req, res) {
                         for (let index = 0; index < 10; index = +index + +step) {
                             let upper = +index + +step
                             let lower = +index
-                            let label = +lower + "_" + +upper
-                            if (+upper == +10) {
+                            let label = ""
+                            if (+upper >= +10) {
                                 upper = 11
+                                
+                                label = +lower + "_10"
+                            }else {
+
+                                label = +lower + "_" + +upper
                             }
                             sir[label] = score_in_range(scoreCollection, lower, upper)
                         }
