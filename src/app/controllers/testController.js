@@ -394,8 +394,6 @@ exports.getAllTest = [auth, function (req, res) {
                 else {
                     TestModel.findAndCountAll({
                         where: { courseUserCourseUserId: courseuser.dataValues.course_user_id },
-                        limit: limit,
-                        offset: offset,
                         include: [{
                             model: TestConfigModel, as: "test_config"
                         }, {
@@ -444,7 +442,7 @@ exports.getAllTest = [auth, function (req, res) {
                                     })
                                     unit.test_config.dataValues = convertCase(unit.test_config.dataValues)
                                 })
-                                return apiResponse.successResponseWithPagingData(res, "Success", testCollection, getPagingData(page), testCollection.length)
+                                return apiResponse.successResponseWithPagingData(res, "Success", testCollection.slice(offset, offset + limit), getPagingData(page), testCollection.length)
 
                             } else {
                                 return apiResponse.successResponseWithPagingData(res, "Test not existed", [], getPagingData(page), 0)
