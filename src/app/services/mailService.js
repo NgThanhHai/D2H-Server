@@ -37,7 +37,7 @@ const messageParser = (testname, errorAssigmentCollection) => {
         // code block
     }
   })
-  var returnMessage = "Đã hoàn thành chấm bài kiem tra " + testname + " ."
+  var returnMessage = "Đã hoàn thành chấm bài kiểm tra " + testname + " ."
   if(message.TestCodeNull.Number > 0)
   {
     var index = 1

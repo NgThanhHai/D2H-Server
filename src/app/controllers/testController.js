@@ -16,21 +16,14 @@ const auth = require('./../../middlewares/jwt');
 var apiResponse = require('./../helpers/apiResponse');
 const getPagingData = require('./../helpers/pagingData')
 const getPagination = require('./../helpers/pagination')
-const Sequelize = require('sequelize');
-const Op = Sequelize.Op;
-const axios = require('axios');
-const Buffer = require('buffer');
 const moment = require('moment');
-const fileUploader = require('./../../configs/cloudinary.config');
 const convertCase = require('../../utils/convertCase');
 const checkMultipleChoice = require('../../utils/checkMultipleChoice');
 const detectError = require('./../services/detectErrorAssignmentService')
 const { performance } = require('perf_hooks');
 const { sendMail, messageParser } = require('./../services/mailService');
-const cloneDeep = require('../../utils/cloneDeep')
-const { copyFileSync } = require('fs');
-const { resolve } = require('path');
-let REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
+const axios = require('axios');
+const ImageProcessingBasicURL = require('../../utils/constants')
 // let workQueue = new Queue('work', REDIS_URL);
 
 exports.createTest = [auth, function (req, res) {
@@ -596,9 +589,9 @@ exports.getTestStatistics = [auth, async function (req, res) {
                             let label = ""
                             if (+upper >= +10) {
                                 upper = 11
-                                
+
                                 label = +lower + "_10"
-                            }else {
+                            } else {
 
                                 label = +lower + "_" + +upper
                             }
@@ -827,162 +820,154 @@ exports.submitAssignment = [auth, async function (req, res) {
                 return apiResponse.conflictResponse(res, "User not have access to this test")
             }
             if (test) {
-                // let testcodes = await TestCodeModel.findAll({
-                //     where: {
-                //         testTestId: test.test_id
-                //     }
-                // })
-                // let test_answer = {}
-                // for (let testcode_index = 0; testcode_index < testcodes.length; testcode_index++) {
-                //     test_answer[testcodes[testcode_index].test_code] = JSON.parse(testcodes[testcode_index].test_answer)
-                // }
+
                 let isMC = 0
-                if(test.test_config.is_multiple_choice == true) {
+                if (test.test_config.is_multiple_choice == true) {
                     isMC = 1
                 }
-                const imageProcessTask = []
-                assignmentCollectionUrl.forEach(assignment => {
-                    //imageProcessTask.push(imageProcessing(test.test_id, test.test_config.paper_type, test_answer, assignment))
-                    console.log(assignment)
-                    imageProcessTask.push(imageProcessing(test.test_id, test.test_config.paper_type, "", isMC, assignment))
-                })
-                res.status(200).json({success: true, message: "Request grade test successfully, the result will be send to your email"})
+                res.status(200).json({ success: true, message: "Request grading test successfully, the result will be send to your email" })
                 res.end()
                 try {
 
-                    let result = await Promise.all(imageProcessTask)
-                    var errorAssignmentCollection = []
-                    let assignment_id = ""
-                    for (var index = 0; index < result.length; index++) {
-                        let resolve = result[index]
-                        if (detectError(resolve) != "") {
-                            var errorAssignment = resolve
-                            errorAssignment.error = detectError(resolve)
-                            errorAssignmentCollection.push(errorAssignment)
-                        } else {
-                            var assigntmentBody = {
-                                image_url: resolve.url,
-                                status: "new",
-                                answer: JSON.stringify(resolve.result.answer)
+                    let result = []
+
+                    for (let indexCallApi = 0; indexCallApi < assignmentCollectionUrl.length; indexCallApi++) {
+
+                        let postBody = JSON.stringify({
+                            test_id: test.test_id,
+                            type: +test.test_config.paper_type,
+                            test_answer: "",
+                            is_mc: isMC,
+                            url: assignmentCollectionUrl[indexCallApi]
+                        })
+
+                        let convertedBody = postBody.replace(/'/g, '"');
+                        let response = await axios({
+                            method: 'post',
+                            url: ImageProcessingBasicURL,
+                            data: convertedBody
+                        })
+                        if (response.data) {
+                            result.push(response.data)
+                        }
+                    }
+                    if (result.length == 0) {
+                        UserModel.findOne({
+                            where: {
+                                user_id: userId
                             }
-
-                            let assignment = await AssignmentModel.create(assigntmentBody)
-                            assignment_id = assignment.assignment_id
-                            TestCodeModel.findOne({
-                                where: {
-                                    test_code: resolve.result.code_id,
-                                    testTestId: resolve.test_id
+                        }).then(user => {
+                            if (!user) { }
+                            else {
+                                sendMail(user.dataValues.mail, "Grade test failed, please try again!", "")
+                            }
+                        })
+                    } else {
+                        var errorAssignmentCollection = []
+                        for (var index = 0; index < result.length; index++) {
+                            let resolve = result[index]
+                            if (detectError(resolve) != "") {
+                                var errorAssignment = resolve
+                                errorAssignment.error = detectError(resolve)
+                                errorAssignmentCollection.push(errorAssignment)
+                            } else {
+                                var assigntmentBody = {
+                                    image_url: resolve.url,
+                                    status: "new",
+                                    answer: JSON.stringify(resolve.result.answer)
                                 }
-                            }).then(testcode => {
-                                if (testcode) {
-                                    var tempAssignmentAnswer = JSON.parse(assignment.answer)
-                                    var tempTestAnswer = JSON.parse(testcode.test_answer)
 
-                                    if (Object.keys(tempAssignmentAnswer).length > Object.keys(tempTestAnswer).length) {
-                                        for (var i = Object.keys(tempAssignmentAnswer).length; i >= Object.keys(tempTestAnswer).length + 1; i--) {
-                                            var property = i + ""
-                                            delete tempAssignmentAnswer[property]
-                                        }
+                                let assignment = await AssignmentModel.create(assigntmentBody)
+                                assignment_id = assignment.assignment_id
+                                TestCodeModel.findOne({
+                                    where: {
+                                        test_code: resolve.result.code_id,
+                                        testTestId: resolve.test_id
                                     }
+                                }).then(testcode => {
+                                    if (testcode) {
+                                        var tempAssignmentAnswer = JSON.parse(assignment.answer)
+                                        var tempTestAnswer = JSON.parse(testcode.test_answer)
 
-                                    var result = diff(tempAssignmentAnswer, tempTestAnswer)
-                                    var grade = countMatchPercentage(result)
-                                    AssignmentModel.update({
-                                        testCodeTestCodeId: testcode.test_code_id,
-                                        grade: grade,
-                                        status: "graded"
-                                    }, {
-                                        where: {
-                                            assignment_id: assignment.assignment_id
+                                        if (Object.keys(tempAssignmentAnswer).length > Object.keys(tempTestAnswer).length) {
+                                            for (var i = Object.keys(tempAssignmentAnswer).length; i >= Object.keys(tempTestAnswer).length + 1; i--) {
+                                                var property = i + ""
+                                                delete tempAssignmentAnswer[property]
+                                            }
                                         }
-                                    })
-                                }
-                            })
 
-                            StudentModel.findOne({
-                                where: {
-                                    student_id: resolve.result.student_id
-                                }
-                            }).then(student => {
-                                if (!student) {
-                                    var student = {
-                                        student_id: resolve.result.student_id,
-                                        student_name: resolve.result.student_id,
-                                        mail: resolve.result.student_id + '@gmail.com'
+                                        var result = diff(tempAssignmentAnswer, tempTestAnswer)
+                                        var grade = countMatchPercentage(result)
+                                        AssignmentModel.update({
+                                            testCodeTestCodeId: testcode.test_code_id,
+                                            grade: grade,
+                                            status: "graded"
+                                        }, {
+                                            where: {
+                                                assignment_id: assignment.assignment_id
+                                            }
+                                        })
                                     }
-                                    StudentModel.create(student).then(student => {
+                                })
+
+                                StudentModel.findOne({
+                                    where: {
+                                        student_id: resolve.result.student_id
+                                    }
+                                }).then(student => {
+                                    if (!student) {
+                                        var student = {
+                                            student_id: resolve.result.student_id,
+                                            student_name: resolve.result.student_id,
+                                            mail: resolve.result.student_id + '@gmail.com'
+                                        }
+                                        StudentModel.create(student).then(student => {
+                                            AssignmentModel.update({ studentStudentId: student.student_id }, {
+                                                where: {
+                                                    assignment_id: assignment.assignment_id
+                                                }
+                                            })
+                                        })
+                                    } else {
                                         AssignmentModel.update({ studentStudentId: student.student_id }, {
                                             where: {
                                                 assignment_id: assignment.assignment_id
                                             }
                                         })
-                                    })
-                                } else {
-                                    AssignmentModel.update({ studentStudentId: student.student_id }, {
-                                        where: {
-                                            assignment_id: assignment.assignment_id
-                                        }
-                                    })
-                                }
+                                    }
 
-                            })
+                                })
 
-                        }
+                            }
 
-                        if (+index === result.length - 1) {
+                            if (+index === result.length - 1) {
 
-                            TestModel.update({
-                                status: 'graded',
-                                graded_date: new Date()
-                            }, {
-                                where: {
-                                    test_id: test.test_id
-                                }
-                            })
+                                TestModel.update({
+                                    status: 'graded',
+                                    graded_date: new Date()
+                                }, {
+                                    where: {
+                                        test_id: test.test_id
+                                    }
+                                })
 
-                            UserModel.findOne({
-                                where: {
-                                    user_id: userId
-                                }
-                            }).then(user => {
-                                if (!user) { }
-                                else {
-                                    var message = messageParser(test.dataValues.test_name, errorAssignmentCollection)
-                                    
-                                    sendMail(user.dataValues.mail, "Submit Assigment Completed", message)
-                                }
-                            })
+                                UserModel.findOne({
+                                    where: {
+                                        user_id: userId
+                                    }
+                                }).then(user => {
+                                    if (!user) { }
+                                    else {
+                                        var message = messageParser(test.dataValues.test_name, errorAssignmentCollection)
 
-                            // if (result.length == 1) {
-                            //     if (errorAssignmentCollection.length === 0) {
-                            //         var endTime = performance.now();
-                            //         console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
-                            //         return apiResponse.successResponseWithData(res, "Grade test successfully!", { assignment_id: assignment_id })
-                            //     } else {
-                            //         switch (errorAssignmentCollection[0].error) {
-                            //             case "TestCodeNull":
-                            //                 return apiResponse.conflictResponseWithData(res, "Test code not found", resolve.draw_image);
-                            //             case "TestCodeWrong":
-                            //                 return apiResponse.conflictResponseWithData(res, "Wrong test code", resolve.draw_image)
-                            //             case "StudentIdNull":
-                            //                 return apiResponse.conflictResponseWithData(res, "Student id not found", resolve.draw_image)
-                            //             case "StudentIdWrong":
-                            //                 return apiResponse.conflictResponseWithData(res, "Student id wrong", resolve.draw_image)
-                            //             default:
-                            //                 return apiResponse.conflictResponseWithData(res, "Something wrong occurs", resolve.draw_image)
-                            //         }
-                            //     }
+                                        sendMail(user.dataValues.mail, "Submit Assigment Completed", message)
+                                    }
+                                })
 
-                            // } else {
-
-                            //     var endTime = performance.now();
-                            //     console.log(`Call to diff function took ${endTime - startTime} milliseconds`);
-                            //     return apiResponse.successResponse(res, "Grade test successfully!")
-                            // }
+                            }
                         }
                     }
                 } catch (err) {
-                    console.log(err)
                     UserModel.findOne({
                         where: {
                             user_id: userId
@@ -993,6 +978,7 @@ exports.submitAssignment = [auth, async function (req, res) {
                             sendMail(user.dataValues.mail, "Grade test failed, please try again!", "")
                         }
                     })
+                    return apiResponse.ErrorResponse(res, err)
                 }
             } else {
                 return apiResponse.badRequestResponse(res, "Test not exist!")
