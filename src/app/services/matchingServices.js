@@ -33,6 +33,11 @@ const countMatchPercentage = (obj) => {
 
 const diff = memorize((obj1, obj2) => {
     const result = {};
+    obj2 = Object.keys(obj2).slice(0, Object.keys(obj1).length).reduce((result, key) => {
+        result[key] = obj2[key];
+    
+        return result;
+    }, {});
     if (Object.is(obj1, obj2)) {
         return undefined;
     }
@@ -57,7 +62,6 @@ const diff = memorize((obj1, obj2) => {
 
     return result;
 });
-
 
 
 module.exports = {memorize, countMatchPercentage, diff}

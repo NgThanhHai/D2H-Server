@@ -19,12 +19,13 @@ const getPagination = require('./../helpers/pagination')
 const moment = require('moment');
 const convertCase = require('../../utils/convertCase');
 const checkMultipleChoice = require('../../utils/checkMultipleChoice');
+const checkCorrectFormatTestCode = require('../../utils/checkCorrectFormatTestCode');
+const sliceAnswer = require('../../utils/sliceAnswer');
 const detectError = require('./../services/detectErrorAssignmentService')
 const { performance } = require('perf_hooks');
 const { sendMail, messageParser } = require('./../services/mailService');
 const axios = require('axios');
 const ImageProcessingBasicURL = require('../../utils/constants')
-// let workQueue = new Queue('work', REDIS_URL);
 
 exports.createTest = [auth, function (req, res) {
     var userId = req.user.user_id;
@@ -69,6 +70,10 @@ exports.createTest = [auth, function (req, res) {
                             case "object": {
                                 test.dataValues.results = []
                                 for (var i = 0; i < req.body.results.length; i++) {
+                                    if (!checkCorrectFormatTestCode(req.body.results[i].test_code)) {
+                                        isWrongTestCodeFormat = true
+                                        break;
+                                    }
                                     var testDetail = {
                                         test_code: req.body.results[i].test_code,
                                         test_answer: JSON.stringify(req.body.results[i].answer),
@@ -78,6 +83,9 @@ exports.createTest = [auth, function (req, res) {
 
                                     var testcode = await TestCodeModel.create(testDetail)
                                     test.dataValues.results.push(testcode)
+                                }
+                                if (isWrongTestCodeFormat) {
+                                    return apiResponse.badRequestResponse(res, "Create test failed! Please make sure all of the test code have exactly 3 digits");
                                 }
                                 for (var index = 0; index < test.dataValues.results.length; index++) {
                                     test.dataValues.results[index].dataValues.test_answer = JSON.parse(test.dataValues.results[index].dataValues.test_answer)
@@ -93,12 +101,18 @@ exports.createTest = [auth, function (req, res) {
                                 try {
                                     const result = await Promise.all(imageProcessTask)
                                     var isMC = false
-                                    var numberOfQuestion = 0
+                                    let numberOfQuestion = 0
+                                    let isWrongTestCodeFormat = false
                                     for (var i = 0; i < result.length; i++) {
                                         let resolve = result[i]
+                                        let test_answer = sliceAnswer(resolve.result.answer)
+                                        if (!checkCorrectFormatTestCode(resolve.result.code_id)) {
+                                            isWrongTestCodeFormat = true
+                                            break;
+                                        }
                                         var testDetail = {
                                             image_url: resolve.url,
-                                            test_answer: JSON.stringify(resolve.result.answer),
+                                            test_answer: JSON.stringify(test_answer),
                                             test_code: resolve.result.code_id,
                                             testTestId: test.test_id
                                         }
@@ -111,7 +125,7 @@ exports.createTest = [auth, function (req, res) {
                                         delete resolve.result.code_id
                                         delete resolve.result.student_id
 
-                                        numberOfQuestion = Object.keys(resolve.result.answer).length
+                                        numberOfQuestion = Object.keys(test_answer).length
                                     }
                                     var TestConfig = {
                                         is_multiple_choice: isMC,
@@ -123,6 +137,10 @@ exports.createTest = [auth, function (req, res) {
                                             testTestId: test.test_id
                                         }
                                     })
+
+                                    if (isWrongTestCodeFormat) {
+                                        return apiResponse.badRequestResponse(res, "Create test failed! Please make sure all of the test code have exactly 3 digits");
+                                    }
                                     test.dataValues.results = result
                                     test.dataValues.config.is_multiple_choice = isMC
                                     test.dataValues.config.total_number_of_question = numberOfQuestion
@@ -172,6 +190,10 @@ exports.createTest = [auth, function (req, res) {
                                                             image_url: answerCollectionUrl[0],
                                                             testTestId: test.test_id
                                                         }
+                                                        if (!checkCorrectFormatTestCode(row.getCell(1).value)) {
+                                                            isWrongTestCodeFormat = true
+                                                            break;
+                                                        }
 
                                                         let testcode = await TestCodeModel.create(testDetail)
                                                         testcode.dataValues = convertCase(testcode.dataValues)
@@ -179,6 +201,9 @@ exports.createTest = [auth, function (req, res) {
                                                         isMC = row.getCell(3).value
                                                         numberOfQuestion = row.getCell(2).value
                                                     }
+                                                }
+                                                if (isWrongTestCodeFormat) {
+                                                    resolve(false)
                                                 }
                                                 var TestConfig = {
                                                     is_multiple_choice: isMC,
@@ -198,23 +223,16 @@ exports.createTest = [auth, function (req, res) {
                                         })
                                     }
 
-                                    async function callApi(dummy) {
-                                        try {
-                                            const result = await getExcel(dummy);
-                                            return result
+                                    const result = await getExcel(JSON.parse(JSON.stringify(test)));
+                                    if (result == false) {
+                                        return apiResponse.badRequestResponse(res, "Create test failed! Please make sure all of the test code have exactly 3 digits");
+                                    } else {
 
-                                        } catch (error) {
-                                            console.error('ERROR:');
-                                            console.error(error);
-                                        }
+                                        result.results.forEach(testcode => {
+                                            testcode.test_answer = JSON.parse(testcode.test_answer)
+                                        })
+                                        return apiResponse.successResponseWithData(res, "Create test successfully", result);
                                     }
-
-                                    let dummy = JSON.parse(JSON.stringify(test))
-                                    var result = await callApi(dummy)
-                                    result.results.forEach(testcode => {
-                                        testcode.test_answer = JSON.parse(testcode.test_answer)
-                                    })
-                                    return apiResponse.successResponseWithData(res, "Create test successfully", result);
                                 } catch (err) {
                                     return apiResponse.ErrorResponse(res, err)
                                 }
