@@ -95,7 +95,7 @@ exports.createTest = [auth, function (req, res) {
                             case "image": {
                                 const imageProcessTask = []
                                 answerCollectionUrl.forEach(assignment => {
-                                    imageProcessTask.push(imageProcessing(test.test_id, Number(testconfig.paper_type), "", assignment))
+                                    imageProcessTask.push(imageProcessing(test.test_id, Number(testconfig.paper_type), "", 1, assignment))
                                 })
                                 try {
                                     const result = await Promise.all(imageProcessTask)
@@ -393,8 +393,7 @@ exports.getAllTest = [auth, function (req, res) {
                 }
                 else {
                     TestModel.findAndCountAll({
-                        where: { courseUserCourseUserId: courseuser.dataValues.course_user_id }
-                        ,
+                        where: { courseUserCourseUserId: courseuser.dataValues.course_user_id },
                         limit: limit,
                         offset: offset,
                         include: [{
@@ -839,10 +838,14 @@ exports.submitAssignment = [auth, async function (req, res) {
                 // for (let testcode_index = 0; testcode_index < testcodes.length; testcode_index++) {
                 //     test_answer[testcodes[testcode_index].test_code] = JSON.parse(testcodes[testcode_index].test_answer)
                 // }
+                let isMC = 0
+                if(test.test_config.is_multiple_choice == true) {
+                    isMC = 1
+                }
                 const imageProcessTask = []
                 assignmentCollectionUrl.forEach(assignment => {
                     //imageProcessTask.push(imageProcessing(test.test_id, test.test_config.paper_type, test_answer, assignment))
-                    imageProcessTask.push(imageProcessing(test.test_id, test.test_config.paper_type, "", assignment))
+                    imageProcessTask.push(imageProcessing(test.test_id, test.test_config.paper_type, "", isMC, assignment))
                 })
                 res.status(200).json({success: true, message: "Request grade test successfully, the result will be send to your email"})
                 res.end()
