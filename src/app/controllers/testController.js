@@ -843,6 +843,7 @@ exports.submitAssignment = [auth, async function (req, res) {
                 const imageProcessTask = []
                 assignmentCollectionUrl.forEach(assignment => {
                     //imageProcessTask.push(imageProcessing(test.test_id, test.test_config.paper_type, test_answer, assignment))
+                    console.log(assignment)
                     imageProcessTask.push(imageProcessing(test.test_id, test.test_config.paper_type, "", isMC, assignment))
                 })
                 res.status(200).json({success: true, message: "Request grade test successfully, the result will be send to your email"})
