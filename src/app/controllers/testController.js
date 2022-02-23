@@ -20,6 +20,7 @@ const moment = require('moment');
 const convertCase = require('../../utils/convertCase');
 const checkMultipleChoice = require('../../utils/checkMultipleChoice');
 const checkCorrectFormatTestCode = require('../../utils/checkCorrectFormatTestCode');
+const checkAnswerFulfillment = require('../../utils/checkAnswerFulfillment');
 const sliceAnswer = require('../../utils/sliceAnswer');
 const detectError = require('./../services/detectErrorAssignmentService')
 const { performance } = require('perf_hooks');
@@ -103,9 +104,14 @@ exports.createTest = [auth, function (req, res) {
                                     var isMC = false
                                     let numberOfQuestion = 0
                                     let isWrongTestCodeFormat = false
+                                    let isAnswerFulfillment = true
                                     for (var i = 0; i < result.length; i++) {
                                         let resolve = result[i]
                                         let test_answer = sliceAnswer(resolve.result.answer)
+                                        if (!checkAnswerFulfillment(test_answer)) {
+                                            isAnswerFulfillment = false
+                                            break;
+                                        }
                                         if (!checkCorrectFormatTestCode(resolve.result.code_id)) {
                                             isWrongTestCodeFormat = true
                                             break;
@@ -140,6 +146,10 @@ exports.createTest = [auth, function (req, res) {
 
                                     if (isWrongTestCodeFormat) {
                                         return apiResponse.badRequestResponse(res, "Create test failed! Please make sure all of the test code have exactly 3 digits");
+                                    }
+                                    if (!isAnswerFulfillment) {
+
+                                        return apiResponse.badRequestResponse(res, "Create test failed! Please make sure all of questions have answer");
                                     }
                                     test.dataValues.results = result
                                     test.dataValues.config.is_multiple_choice = isMC
@@ -889,46 +899,30 @@ exports.submitAssignment = [auth, async function (req, res) {
                                 errorAssignment.error = detectError(resolve)
                                 errorAssignmentCollection.push(errorAssignment)
                             } else {
-                                
-                                let test_answer = sliceAnswer(resolve.result.answer)
-                                var assigntmentBody = {
-                                    image_url: resolve.url,
-                                    status: "new",
-                                    answer: JSON.stringify(test_answer)
-                                }
 
-                                let assignment = await AssignmentModel.create(assigntmentBody)
-                                assignment_id = assignment.assignment_id
-                                TestCodeModel.findOne({
+
+                                let testcode = await TestCodeModel.findOne({
                                     where: {
                                         test_code: resolve.result.code_id,
                                         testTestId: resolve.test_id
                                     }
-                                }).then(testcode => {
-                                    if (testcode) {
-                                        var tempAssignmentAnswer = JSON.parse(assignment.answer)
-                                        var tempTestAnswer = JSON.parse(testcode.test_answer)
-
-                                        if (Object.keys(tempAssignmentAnswer).length > Object.keys(tempTestAnswer).length) {
-                                            for (var i = Object.keys(tempAssignmentAnswer).length; i >= Object.keys(tempTestAnswer).length + 1; i--) {
-                                                var property = i + ""
-                                                delete tempAssignmentAnswer[property]
-                                            }
-                                        }
-
-                                        var result = diff(tempAssignmentAnswer, tempTestAnswer)
-                                        var grade = countMatchPercentage(result)
-                                        AssignmentModel.update({
-                                            testCodeTestCodeId: testcode.test_code_id,
-                                            grade: grade,
-                                            status: "graded"
-                                        }, {
-                                            where: {
-                                                assignment_id: assignment.assignment_id
-                                            }
-                                        })
-                                    }
                                 })
+                                if (testcode) {
+                                    var test_code_answer = JSON.parse(testcode.test_answer)
+                                    var test_answer = sliceAnswer(resolve.result.answer, test_code_answer)
+
+                                    var objDiff = diff(test_code_answer, test_answer)
+                                    var grade = countMatchPercentage(objDiff)
+                                    var assigntmentBody = {
+                                        image_url: resolve.url,
+                                        status: "graded",
+                                        grade: grade,
+                                        answer: JSON.stringify(test_answer)
+                                    }
+
+                                    await AssignmentModel.create(assigntmentBody)
+                                    
+                                }
 
                                 StudentModel.findOne({
                                     where: {

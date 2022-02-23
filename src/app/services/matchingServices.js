@@ -62,6 +62,4 @@ const diff = memorize((obj1, obj2) => {
 
     return result;
 });
-
-
 module.exports = {memorize, countMatchPercentage, diff}
