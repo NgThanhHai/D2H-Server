@@ -27,6 +27,7 @@ const { performance } = require('perf_hooks');
 const { sendMail, messageParser } = require('./../services/mailService');
 const axios = require('axios');
 const ImageProcessingBasicURL = require('../../utils/constants')
+const fs = require('fs')
 
 exports.createTest = [auth, function (req, res) {
     var userId = req.user.user_id;
@@ -224,8 +225,7 @@ exports.createTest = [auth, function (req, res) {
                                                         }
                                                         for (var index = 4; index < row.getCell(2).value + 4; index++) {
                                                             var temp = []
-                                                            if(row.getCell(index).value)
-                                                            {
+                                                            if (row.getCell(index).value) {
                                                                 if ((row.getCell(index).value).length > 1) {
                                                                     for (var letter = 0; letter < (row.getCell(index).value).length; letter++) {
                                                                         if ((row.getCell(index).value)[letter] == "A" || (row.getCell(index).value)[letter] == "B"
@@ -239,12 +239,12 @@ exports.createTest = [auth, function (req, res) {
                                                                     temp.push(row.getCell(index).value)
                                                                 }
                                                                 test_anwser[(index - 3).toString()] = temp
-                                                            }else {
-                                                                
+                                                            } else {
+
                                                                 isAnswerFulfillment = false
                                                                 break;
                                                             }
-                                                            
+
                                                         }
 
                                                         var testDetail = {
@@ -253,8 +253,8 @@ exports.createTest = [auth, function (req, res) {
                                                             image_url: answerCollectionUrl[0],
                                                             testTestId: test.test_id
                                                         }
-                                                        
-                                                        if (!checkCorrectFormatTestCode((row.getCell(1).value).toString())) {                                                    
+
+                                                        if (!checkCorrectFormatTestCode((row.getCell(1).value).toString())) {
                                                             isWrongTestCodeFormat = true
                                                             break;
                                                         }
@@ -267,21 +267,19 @@ exports.createTest = [auth, function (req, res) {
                                                         testcode.dataValues = convertCase(testcode.dataValues)
                                                         returnTestCode.push(testcode)
                                                         isMC = row.getCell(3).value
-                                                        
+
                                                     }
                                                 }
                                                 if (isWrongTestCodeFormat) {
                                                     resolve(1)
                                                 }
-                                                if(!isAnswerFulfillment)
-                                                {
+                                                if (!isAnswerFulfillment) {
                                                     resolve(2)
                                                 }
-                                                if(testCodesHaveDifferentNumberOfQuestion)
-                                                {
+                                                if (testCodesHaveDifferentNumberOfQuestion) {
                                                     resolve(3)
                                                 }
-                                                
+
                                                 var TestConfig = {
                                                     is_multiple_choice: isMC,
                                                     total_number_of_question: numberOfQuestion
@@ -309,24 +307,22 @@ exports.createTest = [auth, function (req, res) {
                                         })
                                         return apiResponse.badRequestResponse(res, "Please make sure all of the test code have exactly 3 digits \n (Example: 012, 231, 478)");
                                     } else {
-                                        if(result == 2)
-                                        {
+                                        if (result == 2) {
                                             TestModel.destroy({
                                                 where: {
                                                     test_id: test.test_id
                                                 }
                                             })
                                             return apiResponse.badRequestResponse(res, "Please make sure all of the questions have answer");
-                                        }else {
-                                            if(result == 3)
-                                            {
+                                        } else {
+                                            if (result == 3) {
                                                 TestModel.destroy({
                                                     where: {
                                                         test_id: test.test_id
                                                     }
                                                 })
                                                 return apiResponse.badRequestResponse(res, "Please make sure all of the testcode have the same amount of questions");
-                                            }else {
+                                            } else {
 
                                                 result.results.forEach(testcode => {
                                                     testcode.test_answer = JSON.parse(testcode.test_answer)
@@ -334,7 +330,7 @@ exports.createTest = [auth, function (req, res) {
                                                 return apiResponse.successResponseWithData(res, "Create test successfully", result);
                                             }
                                         }
-                                        
+
                                     }
                                 } catch (err) {
                                     return apiResponse.ErrorResponse(res, err)
@@ -1104,7 +1100,7 @@ exports.submitAssignment = [auth, async function (req, res) {
 
 
 exports.exportTest = [auth, async function (req, res) {
-    var testIdCollection = req.body.test_id
+    var testIdCollection = req.body.test_id 
     var startDate = req.body.start_date ? req.body.start_date : null
     var endDate = req.body.end_date ? req.body.end_date : null
     var startGrade = req.body.start_grade ? req.body.start_grade : 0
@@ -1202,9 +1198,9 @@ exports.exportTest = [auth, async function (req, res) {
 
             res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
             res.setHeader("Content-Disposition", "attachment; filename=" + fileName);
-            workbook.xlsx.write(res).then(function () {
-                res.end();
-            });
+            const buffer = await workbook.xlsx.writeBuffer();
+            return res.end(new Buffer(buffer, 'base64'));
+
         } else {
             return apiResponse.badRequestResponse(res, "No test to export")
         }
