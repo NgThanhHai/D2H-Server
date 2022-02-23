@@ -21,7 +21,7 @@ const convertCase = require('../../utils/convertCase');
 const checkMultipleChoice = require('../../utils/checkMultipleChoice');
 const checkCorrectFormatTestCode = require('../../utils/checkCorrectFormatTestCode');
 const checkAnswerFulfillment = require('../../utils/checkAnswerFulfillment');
-const sliceAnswer = require('../../utils/sliceAnswer');
+const {deleteBlank, sliceAnswer} = require('../../utils/sliceAnswer');
 const detectError = require('./../services/detectErrorAssignmentService')
 const { performance } = require('perf_hooks');
 const { sendMail, messageParser } = require('./../services/mailService');
@@ -107,7 +107,7 @@ exports.createTest = [auth, function (req, res) {
                                     let isAnswerFulfillment = true
                                     for (var i = 0; i < result.length; i++) {
                                         let resolve = result[i]
-                                        let test_answer = sliceAnswer(resolve.result.answer)
+                                        let test_answer = deleteBlank(resolve.result.answer)
                                         if (!checkAnswerFulfillment(test_answer)) {
                                             isAnswerFulfillment = false
                                             break;
@@ -133,6 +133,13 @@ exports.createTest = [auth, function (req, res) {
 
                                         numberOfQuestion = Object.keys(test_answer).length
                                     }
+                                    if (isWrongTestCodeFormat) {
+                                        return apiResponse.badRequestResponse(res, "Create test failed! Please make sure all of the test code have exactly 3 digits");
+                                    }
+                                    if (!isAnswerFulfillment) {
+
+                                        return apiResponse.badRequestResponse(res, "Create test failed! Please make sure all of questions have answer");
+                                    }
                                     var TestConfig = {
                                         is_multiple_choice: isMC,
                                         total_number_of_question: numberOfQuestion
@@ -143,14 +150,7 @@ exports.createTest = [auth, function (req, res) {
                                             testTestId: test.test_id
                                         }
                                     })
-
-                                    if (isWrongTestCodeFormat) {
-                                        return apiResponse.badRequestResponse(res, "Create test failed! Please make sure all of the test code have exactly 3 digits");
-                                    }
-                                    if (!isAnswerFulfillment) {
-
-                                        return apiResponse.badRequestResponse(res, "Create test failed! Please make sure all of questions have answer");
-                                    }
+                                    
                                     test.dataValues.results = result
                                     test.dataValues.config.is_multiple_choice = isMC
                                     test.dataValues.config.total_number_of_question = numberOfQuestion
