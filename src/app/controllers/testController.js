@@ -70,6 +70,7 @@ exports.createTest = [auth, function (req, res) {
                         switch (testconfig.dataValues.test_answer_type) {
                             case "object": {
                                 test.dataValues.results = []
+                                let isWrongTestCodeFormat = false
                                 for (var i = 0; i < req.body.results.length; i++) {
                                     if (!checkCorrectFormatTestCode(req.body.results[i].test_code)) {
                                         isWrongTestCodeFormat = true
