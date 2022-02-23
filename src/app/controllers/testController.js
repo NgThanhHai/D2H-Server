@@ -1117,6 +1117,7 @@ exports.exportTest = [auth, async function (req, res) {
     try {
         const workbook = new excel.Workbook();
         if (testIdCollection.length > 0) {
+            let isTestNotFind = false
             for (var testIndex = 0; testIndex < testIdCollection.length; testIndex++) {
                 var test = await TestModel.findOne({
                     where: {
@@ -1124,11 +1125,12 @@ exports.exportTest = [auth, async function (req, res) {
                     }
                 })
                 if (!test) {
-                    continue;
+                    isTestNotFind = true;
+                    break;
                 } else {
 
-                    const worksheet = workbook.addWorksheet(test.dataValues.test_name + " " + testIndex);
-                    worksheet.columns = [
+                    const worksheet = workbook.addWorksheet(test.dataValues.test_name);
+                    worksheet.columns = [ 
                         { header: 'Number', key: 'no' },
                         { header: 'Test Code', key: 'test_code' },
                         { header: 'Test Code Answer', key: 'test_answer' },
@@ -1198,6 +1200,10 @@ exports.exportTest = [auth, async function (req, res) {
 
                 }
 
+            }
+            if(isTestNotFind)
+            {
+                return apiResponse.badRequestResponse(res, "No test to export")
             }
             try {
                 await workbook.xlsx.writeFile('./export_test_grade.xlsx');
