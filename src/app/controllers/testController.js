@@ -28,8 +28,6 @@ const { sendMail, messageParser } = require('./../services/mailService');
 const axios = require('axios');
 const ImageProcessingBasicURL = require('../../utils/constants')
 const cloudinary = require('cloudinary').v2;
-const { Blob } = require('buffer');
-var FileSaver = require('file-saver');
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_NAME,
     api_key: process.env.CLOUDINARY_KEY,
