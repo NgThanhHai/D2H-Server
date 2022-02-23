@@ -144,7 +144,7 @@ exports.createTest = [auth, function (req, res) {
                                                 test_id: test.test_id
                                             }
                                         })
-                                        return apiResponse.badRequestResponse(res, "Create test failed! Please make sure all of the test code have exactly 3 digits \n Example: If you have 60 questions, Every question from 1 to 60 must have AT LEAST ONE answer");
+                                        return apiResponse.badRequestResponse(res, "Create test failed! Please make sure all of the test code have exactly 3 digits");
                                     }
                                     if (!isAnswerFulfillment) {
                                         TestModel.destroy({
@@ -152,7 +152,7 @@ exports.createTest = [auth, function (req, res) {
                                                 test_id: test.test_id
                                             }
                                         })
-                                        return apiResponse.badRequestResponse(res, "Create test failed! Please make sure all of questions have answer");
+                                        return apiResponse.badRequestResponse(res, "Create test failed! Please make sure all of questions have answer \n Example: If you have 60 questions, Every question from 1 to 60 must have AT LEAST ONE answer");
                                     }
                                     var TestConfig = {
                                         is_multiple_choice: isMC,
