@@ -86,6 +86,11 @@ exports.createTest = [auth, function (req, res) {
                                     test.dataValues.results.push(testcode)
                                 }
                                 if (isWrongTestCodeFormat) {
+                                    TestModel.destroy({
+                                        where: {
+                                            test_id: test.test_id
+                                        }
+                                    })
                                     return apiResponse.badRequestResponse(res, "Create test failed! Please make sure all of the test code have exactly 3 digits");
                                 }
                                 for (var index = 0; index < test.dataValues.results.length; index++) {
@@ -134,10 +139,19 @@ exports.createTest = [auth, function (req, res) {
                                         numberOfQuestion = Object.keys(test_answer).length
                                     }
                                     if (isWrongTestCodeFormat) {
+                                        TestModel.destroy({
+                                            where: {
+                                                test_id: test.test_id
+                                            }
+                                        })
                                         return apiResponse.badRequestResponse(res, "Create test failed! Please make sure all of the test code have exactly 3 digits");
                                     }
                                     if (!isAnswerFulfillment) {
-
+                                        TestModel.destroy({
+                                            where: {
+                                                test_id: test.test_id
+                                            }
+                                        })
                                         return apiResponse.badRequestResponse(res, "Create test failed! Please make sure all of questions have answer");
                                     }
                                     var TestConfig = {
@@ -235,6 +249,11 @@ exports.createTest = [auth, function (req, res) {
 
                                     const result = await getExcel(JSON.parse(JSON.stringify(test)));
                                     if (result == false) {
+                                        TestModel.destroy({
+                                        where: {
+                                            test_id: test.test_id
+                                        }
+                                    })
                                         return apiResponse.badRequestResponse(res, "Create test failed! Please make sure all of the test code have exactly 3 digits");
                                     } else {
 
