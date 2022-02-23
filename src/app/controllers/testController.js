@@ -108,6 +108,7 @@ exports.createTest = [auth, function (req, res) {
                                     const result = await Promise.all(imageProcessTask)
                                     var isMC = false
                                     let numberOfQuestion = 0
+                                    let arrNumberOfQuestion = []
                                     let isWrongTestCodeFormat = false
                                     let isAnswerFulfillment = true
                                     for (var i = 0; i < result.length; i++) {
@@ -136,8 +137,8 @@ exports.createTest = [auth, function (req, res) {
                                         resolve.test_code = resolve.result.code_id
                                         delete resolve.result.code_id
                                         delete resolve.result.student_id
-
                                         numberOfQuestion = Object.keys(test_answer).length
+                                        arrNumberOfQuestion.push(numberOfQuestion)
                                     }
                                     if (isWrongTestCodeFormat) {
                                         TestModel.destroy({
@@ -154,6 +155,16 @@ exports.createTest = [auth, function (req, res) {
                                             }
                                         })
                                         return apiResponse.badRequestResponse(res, "Please make sure all of " + numberOfQuestion + " questions have answer");
+                                    }
+                                    if(!arrNumberOfQuestion.every( (val, i, arr) => val === arr[0]))
+                                    {
+                                        TestModel.destroy({
+                                            where: {
+                                                test_id: test.test_id
+                                            }
+                                        })
+                                        return apiResponse.badRequestResponse(res, "Please make sure all of the test code have the same amount of questions");
+                                    
                                     }
                                     var TestConfig = {
                                         is_multiple_choice: isMC,
