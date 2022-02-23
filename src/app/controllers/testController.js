@@ -889,10 +889,12 @@ exports.submitAssignment = [auth, async function (req, res) {
                                 errorAssignment.error = detectError(resolve)
                                 errorAssignmentCollection.push(errorAssignment)
                             } else {
+                                
+                                let test_answer = sliceAnswer(resolve.result.answer)
                                 var assigntmentBody = {
                                     image_url: resolve.url,
                                     status: "new",
-                                    answer: JSON.stringify(resolve.result.answer)
+                                    answer: JSON.stringify(test_answer)
                                 }
 
                                 let assignment = await AssignmentModel.create(assigntmentBody)
