@@ -907,6 +907,7 @@ exports.submitAssignment = [auth, async function (req, res) {
                                         testTestId: resolve.test_id
                                     }
                                 })
+                                let assignment = {}
                                 if (testcode) {
                                     var test_code_answer = JSON.parse(testcode.test_answer)
                                     var test_answer = sliceAnswer(resolve.result.answer, test_code_answer)
@@ -920,7 +921,7 @@ exports.submitAssignment = [auth, async function (req, res) {
                                         answer: JSON.stringify(test_answer)
                                     }
 
-                                    await AssignmentModel.create(assigntmentBody)
+                                    assignment = await AssignmentModel.create(assigntmentBody)
                                     
                                 }
 
