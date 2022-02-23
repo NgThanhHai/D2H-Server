@@ -111,9 +111,13 @@ exports.createTest = [auth, function (req, res) {
                                     let arrNumberOfQuestion = []
                                     let isWrongTestCodeFormat = false
                                     let isAnswerFulfillment = true
+                                    let testCodesHaveDifferentNumberOfQuestion = false
+                                    let arrTestCode = []
                                     for (var i = 0; i < result.length; i++) {
                                         let resolve = result[i]
                                         let test_answer = deleteBlank(resolve.result.answer)
+                                        numberOfQuestion = Object.keys(test_answer).length
+                                        arrNumberOfQuestion.push(numberOfQuestion)
                                         if (!checkAnswerFulfillment(test_answer)) {                                            
                                             numberOfQuestion = Object.keys(test_answer).length
                                             isAnswerFulfillment = false
@@ -123,22 +127,25 @@ exports.createTest = [auth, function (req, res) {
                                             isWrongTestCodeFormat = true
                                             break;
                                         }
+                                        if(!arrNumberOfQuestion.every( (val, i, arrNumberOfQuestion) => val === arrNumberOfQuestion[0]))
+                                        {
+                                            testCodesHaveDifferentNumberOfQuestion = true
+                                            break;
+                                        }
                                         var testDetail = {
                                             image_url: resolve.url,
                                             test_answer: JSON.stringify(test_answer),
                                             test_code: resolve.result.code_id,
                                             testTestId: test.test_id
                                         }
+                                        arrTestCode.push(testDetail)
                                         if (checkMultipleChoice(resolve.result.answer)) {
                                             isMC = true
                                         }
-                                        TestCodeModel.create(testDetail)
 
                                         resolve.test_code = resolve.result.code_id
                                         delete resolve.result.code_id
                                         delete resolve.result.student_id
-                                        numberOfQuestion = Object.keys(test_answer).length
-                                        arrNumberOfQuestion.push(numberOfQuestion)
                                     }
                                     if (isWrongTestCodeFormat) {
                                         TestModel.destroy({
@@ -156,7 +163,7 @@ exports.createTest = [auth, function (req, res) {
                                         })
                                         return apiResponse.badRequestResponse(res, "Please make sure all of " + numberOfQuestion + " questions have answer");
                                     }
-                                    if(!arrNumberOfQuestion.every( (val, i, arr) => val === arr[0]))
+                                    if(testCodesHaveDifferentNumberOfQuestion)
                                     {
                                         TestModel.destroy({
                                             where: {
@@ -166,6 +173,9 @@ exports.createTest = [auth, function (req, res) {
                                         return apiResponse.badRequestResponse(res, "Please make sure all of the test code have the same amount of questions");
                                     
                                     }
+                                    arrTestCode.forEach(testcode => {
+                                        TestCodeModel.create(testcode)
+                                    })
                                     var TestConfig = {
                                         is_multiple_choice: isMC,
                                         total_number_of_question: numberOfQuestion
