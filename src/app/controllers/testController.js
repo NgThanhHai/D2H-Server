@@ -207,28 +207,44 @@ exports.createTest = [auth, function (req, res) {
 
                                                 await workbook.xlsx.load(buff.body)
                                                 var worksheet = workbook.worksheets[0]
+                                                let isWrongTestCodeFormat = false
+                                                let isAnswerFulfillment = true
+                                                let testCodesHaveDifferentNumberOfQuestion = false
+                                                let arrNumberOfQuestion = []
                                                 for (var j = 0; j < worksheet.rowCount; j++) {
                                                     var row = worksheet.getRow(j + 1)
                                                     var rowNumber = j + 1
                                                     if (rowNumber > 1) {
                                                         var test_anwser = {}
-                                                        let isWrongTestCodeFormat = false
-                                                        let isAnswerFulfillment = true
+                                                        numberOfQuestion = row.getCell(2).value
+                                                        arrNumberOfQuestion.push(numberOfQuestion)
+                                                        if (!arrNumberOfQuestion.every((val, i, arrNumberOfQuestion) => val === arrNumberOfQuestion[0])) {
+                                                            testCodesHaveDifferentNumberOfQuestion = true
+                                                            break;
+                                                        }
                                                         for (var index = 4; index < row.getCell(2).value + 4; index++) {
                                                             var temp = []
-                                                            if ((row.getCell(index).value).length > 1) {
-                                                                for (var letter = 0; letter < (row.getCell(index).value).length; letter++) {
-                                                                    if ((row.getCell(index).value)[letter] == "A" || (row.getCell(index).value)[letter] == "B"
-                                                                        || (row.getCell(index).value)[letter] == "C" || (row.getCell(index).value)[letter] == "D"
-                                                                        || (row.getCell(index).value)[letter] == "a" || (row.getCell(index).value)[letter] == "b"
-                                                                        || (row.getCell(index).value)[letter] == "c" || (row.getCell(index).value)[letter] == "d") {
-                                                                        temp.push((row.getCell(index).value)[letter])
+                                                            if(row.getCell(index).value)
+                                                            {
+                                                                if ((row.getCell(index).value).length > 1) {
+                                                                    for (var letter = 0; letter < (row.getCell(index).value).length; letter++) {
+                                                                        if ((row.getCell(index).value)[letter] == "A" || (row.getCell(index).value)[letter] == "B"
+                                                                            || (row.getCell(index).value)[letter] == "C" || (row.getCell(index).value)[letter] == "D"
+                                                                            || (row.getCell(index).value)[letter] == "a" || (row.getCell(index).value)[letter] == "b"
+                                                                            || (row.getCell(index).value)[letter] == "c" || (row.getCell(index).value)[letter] == "d") {
+                                                                            temp.push((row.getCell(index).value)[letter])
+                                                                        }
                                                                     }
+                                                                } else {
+                                                                    temp.push(row.getCell(index).value)
                                                                 }
-                                                            } else {
-                                                                temp.push(row.getCell(index).value)
+                                                                test_anwser[(index - 3).toString()] = temp
+                                                            }else {
+                                                                
+                                                                isAnswerFulfillment = false
+                                                                break;
                                                             }
-                                                            test_anwser[(index - 3).toString()] = temp
+                                                            
                                                         }
 
                                                         var testDetail = {
@@ -237,11 +253,12 @@ exports.createTest = [auth, function (req, res) {
                                                             image_url: answerCollectionUrl[0],
                                                             testTestId: test.test_id
                                                         }
-                                                        if (!checkCorrectFormatTestCode(row.getCell(1).value)) {
+                                                        
+                                                        if (!checkCorrectFormatTestCode((row.getCell(1).value).toString())) {                                                    
                                                             isWrongTestCodeFormat = true
                                                             break;
                                                         }
-                                                        if (!checkAnswerFulfillment(test_anwser)) {
+                                                        if (!checkAnswerFulfillment(test_anwser) || !isAnswerFulfillment) {
                                                             isAnswerFulfillment = false
                                                             break;
                                                         }
@@ -250,7 +267,7 @@ exports.createTest = [auth, function (req, res) {
                                                         testcode.dataValues = convertCase(testcode.dataValues)
                                                         returnTestCode.push(testcode)
                                                         isMC = row.getCell(3).value
-                                                        numberOfQuestion = row.getCell(2).value
+                                                        
                                                     }
                                                 }
                                                 if (isWrongTestCodeFormat) {
@@ -260,6 +277,11 @@ exports.createTest = [auth, function (req, res) {
                                                 {
                                                     resolve(2)
                                                 }
+                                                if(testCodesHaveDifferentNumberOfQuestion)
+                                                {
+                                                    resolve(3)
+                                                }
+                                                
                                                 var TestConfig = {
                                                     is_multiple_choice: isMC,
                                                     total_number_of_question: numberOfQuestion
@@ -296,10 +318,21 @@ exports.createTest = [auth, function (req, res) {
                                             })
                                             return apiResponse.badRequestResponse(res, "Please make sure all of the questions have answer");
                                         }else {
-                                            result.results.forEach(testcode => {
-                                                testcode.test_answer = JSON.parse(testcode.test_answer)
-                                            })
-                                            return apiResponse.successResponseWithData(res, "Create test successfully", result);
+                                            if(result == 3)
+                                            {
+                                                TestModel.destroy({
+                                                    where: {
+                                                        test_id: test.test_id
+                                                    }
+                                                })
+                                                return apiResponse.badRequestResponse(res, "Please make sure all of the testcode have the same amount of questions");
+                                            }else {
+
+                                                result.results.forEach(testcode => {
+                                                    testcode.test_answer = JSON.parse(testcode.test_answer)
+                                                })
+                                                return apiResponse.successResponseWithData(res, "Create test successfully", result);
+                                            }
                                         }
                                         
                                     }
