@@ -1206,11 +1206,11 @@ exports.exportTest = [auth, async function (req, res) {
                 return apiResponse.badRequestResponse(res, "No test to export")
             }
             try {
-                await workbook.xlsx.writeFile('./export_test_grade.xlsx');
+                await workbook.xlsx.writeFile('./Assignments data.xlsx');
             } catch (error) {
                 console.log('Write file fails: ', error);
             }
-            cloudinary.uploader.upload('./export_test_grade.xlsx',
+            cloudinary.uploader.upload('./Assignments data.xlsx',
                 { resource_type: "raw" },
                 function (error, result) {
 
