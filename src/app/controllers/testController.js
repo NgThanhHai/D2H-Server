@@ -918,7 +918,8 @@ exports.submitAssignment = [auth, async function (req, res) {
                                         image_url: resolve.url,
                                         status: "graded",
                                         grade: grade,
-                                        answer: JSON.stringify(test_answer)
+                                        answer: JSON.stringify(test_answer),
+                                        testCodeTestCodeId: testcode.dataValues.test_code_id
                                     }
 
                                     assignment = await AssignmentModel.create(assigntmentBody)
