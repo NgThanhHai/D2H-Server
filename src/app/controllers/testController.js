@@ -27,7 +27,14 @@ const { performance } = require('perf_hooks');
 const { sendMail, messageParser } = require('./../services/mailService');
 const axios = require('axios');
 const ImageProcessingBasicURL = require('../../utils/constants')
-const fs = require('fs')
+const cloudinary = require('cloudinary').v2;
+const { Blob } = require('buffer');
+var FileSaver = require('file-saver');
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_NAME,
+    api_key: process.env.CLOUDINARY_KEY,
+    api_secret: process.env.CLOUDINARY_SECRET
+});
 
 exports.createTest = [auth, function (req, res) {
     var userId = req.user.user_id;
@@ -1100,7 +1107,7 @@ exports.submitAssignment = [auth, async function (req, res) {
 
 
 exports.exportTest = [auth, async function (req, res) {
-    var testIdCollection = req.body.test_id 
+    var testIdCollection = req.body.test_id
     var startDate = req.body.start_date ? req.body.start_date : null
     var endDate = req.body.end_date ? req.body.end_date : null
     var startGrade = req.body.start_grade ? req.body.start_grade : 0
@@ -1194,12 +1201,17 @@ exports.exportTest = [auth, async function (req, res) {
                 }
 
             }
-            var fileName = 'export_test_grade.xlsx';
+            try {
+                await workbook.xlsx.writeFile('./export_test_grade.xlsx');
+            } catch (error) {
+                console.log('Write file fails: ', error);
+            }
+            cloudinary.uploader.upload('./export_test_grade.xlsx',
+                { resource_type: "raw" },
+                function (error, result) {
 
-            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-            res.setHeader("Content-Disposition", "attachment; filename=" + fileName);
-            const buffer = await workbook.xlsx.writeBuffer();
-            return res.end(new Buffer(buffer, 'base64'));
+                    return apiResponse.successResponseWithData(res, "Success", { path: result.url })
+                });
 
         } else {
             return apiResponse.badRequestResponse(res, "No test to export")
