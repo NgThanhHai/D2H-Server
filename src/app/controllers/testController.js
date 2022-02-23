@@ -21,7 +21,7 @@ const convertCase = require('../../utils/convertCase');
 const checkMultipleChoice = require('../../utils/checkMultipleChoice');
 const checkCorrectFormatTestCode = require('../../utils/checkCorrectFormatTestCode');
 const checkAnswerFulfillment = require('../../utils/checkAnswerFulfillment');
-const {deleteBlank, sliceAnswer} = require('../../utils/sliceAnswer');
+const { deleteBlank, sliceAnswer } = require('../../utils/sliceAnswer');
 const detectError = require('./../services/detectErrorAssignmentService')
 const { performance } = require('perf_hooks');
 const { sendMail, messageParser } = require('./../services/mailService');
@@ -119,7 +119,7 @@ exports.createTest = [auth, function (req, res) {
                                         let test_answer = deleteBlank(resolve.result.answer)
                                         numberOfQuestion = Object.keys(test_answer).length
                                         arrNumberOfQuestion.push(numberOfQuestion)
-                                        if (!checkAnswerFulfillment(test_answer)) {                                            
+                                        if (!checkAnswerFulfillment(test_answer)) {
                                             numberOfQuestion = Object.keys(test_answer).length
                                             isAnswerFulfillment = false
                                             break;
@@ -128,8 +128,7 @@ exports.createTest = [auth, function (req, res) {
                                             isWrongTestCodeFormat = true
                                             break;
                                         }
-                                        if(!arrNumberOfQuestion.every( (val, i, arrNumberOfQuestion) => val === arrNumberOfQuestion[0]))
-                                        {
+                                        if (!arrNumberOfQuestion.every((val, i, arrNumberOfQuestion) => val === arrNumberOfQuestion[0])) {
                                             testCodesHaveDifferentNumberOfQuestion = true
                                             break;
                                         }
@@ -164,15 +163,14 @@ exports.createTest = [auth, function (req, res) {
                                         })
                                         return apiResponse.badRequestResponse(res, "Please make sure all of " + numberOfQuestion + " questions have answer");
                                     }
-                                    if(testCodesHaveDifferentNumberOfQuestion)
-                                    {
+                                    if (testCodesHaveDifferentNumberOfQuestion) {
                                         TestModel.destroy({
                                             where: {
                                                 test_id: test.test_id
                                             }
                                         })
                                         return apiResponse.badRequestResponse(res, "Please make sure all of the test code have the same amount of questions");
-                                    
+
                                     }
                                     arrTestCode.forEach(testcode => {
                                         TestCodeModel.create(testcode)
@@ -187,7 +185,7 @@ exports.createTest = [auth, function (req, res) {
                                             testTestId: test.test_id
                                         }
                                     })
-                                    
+
                                     test.dataValues.results = result
                                     test.dataValues.config.is_multiple_choice = isMC
                                     test.dataValues.config.total_number_of_question = numberOfQuestion
@@ -214,6 +212,8 @@ exports.createTest = [auth, function (req, res) {
                                                     var rowNumber = j + 1
                                                     if (rowNumber > 1) {
                                                         var test_anwser = {}
+                                                        let isWrongTestCodeFormat = false
+                                                        let isAnswerFulfillment = true
                                                         for (var index = 4; index < row.getCell(2).value + 4; index++) {
                                                             var temp = []
                                                             if ((row.getCell(index).value).length > 1) {
@@ -241,6 +241,10 @@ exports.createTest = [auth, function (req, res) {
                                                             isWrongTestCodeFormat = true
                                                             break;
                                                         }
+                                                        if (!checkAnswerFulfillment(test_anwser)) {
+                                                            isAnswerFulfillment = false
+                                                            break;
+                                                        }
 
                                                         let testcode = await TestCodeModel.create(testDetail)
                                                         testcode.dataValues = convertCase(testcode.dataValues)
@@ -250,7 +254,11 @@ exports.createTest = [auth, function (req, res) {
                                                     }
                                                 }
                                                 if (isWrongTestCodeFormat) {
-                                                    resolve(false)
+                                                    resolve(1)
+                                                }
+                                                if(!isAnswerFulfillment)
+                                                {
+                                                    resolve(2)
                                                 }
                                                 var TestConfig = {
                                                     is_multiple_choice: isMC,
@@ -271,19 +279,29 @@ exports.createTest = [auth, function (req, res) {
                                     }
 
                                     const result = await getExcel(JSON.parse(JSON.stringify(test)));
-                                    if (result == false) {
+                                    if (result == 1) {
                                         TestModel.destroy({
-                                        where: {
-                                            test_id: test.test_id
-                                        }
-                                    })
+                                            where: {
+                                                test_id: test.test_id
+                                            }
+                                        })
                                         return apiResponse.badRequestResponse(res, "Please make sure all of the test code have exactly 3 digits \n (Example: 012, 231, 478)");
                                     } else {
-
-                                        result.results.forEach(testcode => {
-                                            testcode.test_answer = JSON.parse(testcode.test_answer)
-                                        })
-                                        return apiResponse.successResponseWithData(res, "Create test successfully", result);
+                                        if(result == 2)
+                                        {
+                                            TestModel.destroy({
+                                                where: {
+                                                    test_id: test.test_id
+                                                }
+                                            })
+                                            return apiResponse.badRequestResponse(res, "Please make sure all of the questions have answer");
+                                        }else {
+                                            result.results.forEach(testcode => {
+                                                testcode.test_answer = JSON.parse(testcode.test_answer)
+                                            })
+                                            return apiResponse.successResponseWithData(res, "Create test successfully", result);
+                                        }
+                                        
                                     }
                                 } catch (err) {
                                     return apiResponse.ErrorResponse(res, err)
@@ -965,7 +983,7 @@ exports.submitAssignment = [auth, async function (req, res) {
                                     }
 
                                     assignment = await AssignmentModel.create(assigntmentBody)
-                                    
+
                                 }
 
                                 StudentModel.findOne({
