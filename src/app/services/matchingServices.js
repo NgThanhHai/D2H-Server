@@ -60,16 +60,26 @@ const diff = memorize((obj1, obj2) => {
         //     }
         // }
         let arrayResult = []
-        for(let index = 0; index < obj1[key].length; index++)  {
+        if(obj2[key].length > obj1[key].length) {
+            for(let index = 0; index < obj1[key].length; index++)  {
             
             
-            if (obj2[key].includes(obj1[key][index]))
-            {
-                arrayResult.push( "True")
-            }else {
-                arrayResult.push( "False")
+                    arrayResult.push( "False")
+                
+            }
+        }else {
+            for(let index = 0; index < obj1[key].length; index++)  {
+            
+            
+                if (obj2[key].includes(obj1[key][index]))
+                {
+                    arrayResult.push( "True")
+                }else {
+                    arrayResult.push( "False")
+                }
             }
         }
+        
         result[key] = arrayResult
 
     });
@@ -77,4 +87,6 @@ const diff = memorize((obj1, obj2) => {
     return result;
 });
 
+
 module.exports = {memorize, countMatchPercentage, diff}
+
