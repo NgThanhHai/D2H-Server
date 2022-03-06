@@ -44,22 +44,37 @@ const diff = memorize((obj1, obj2) => {
     if (!obj2 || typeof obj2 !== 'object') {
         return obj2;
     }
+    
     Object.keys(obj1 || {}).concat(Object.keys(obj2 || {})).forEach(key => {
 
-        if (obj2[key] !== obj1[key] && !Object.is(obj1[key], obj2[key])) {
-            result[key] = "False";
-        } else {
-            result[key] = "True";
+        // if (obj2[key] !== obj1[key] && !Object.is(obj1[key], obj2[key])) {
+        //     result[key] = "False";
+        // } else {
+        //     result[key] = "True";
 
-        }
-        if (typeof obj2[key] === 'object' && typeof obj1[key] === 'object') {
-            const value = diff(obj1[key], obj2[key]);
-            if (value !== undefined) {
-                result[key] = value;
+        // }
+        // if (typeof obj2[key] === 'object' && typeof obj1[key] === 'object') {
+        //     const value = diff(obj1[key], obj2[key]);
+        //     if (value !== undefined) {
+        //         result[key] = value;
+        //     }
+        // }
+        let arrayResult = []
+        for(let index = 0; index < obj1[key].length; index++)  {
+            
+            
+            if (obj2[key].includes(obj1[key][index]))
+            {
+                arrayResult.push( "True")
+            }else {
+                arrayResult.push( "False")
             }
         }
+        result[key] = arrayResult
+
     });
 
     return result;
 });
+
 module.exports = {memorize, countMatchPercentage, diff}
